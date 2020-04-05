@@ -18,11 +18,9 @@ Signed-off-by: Sean Wang <sean.wang@mediatek.com>
  drivers/net/dsa/mt7530.h |  29 ++++-
  2 files changed, 203 insertions(+), 57 deletions(-)
 
-diff --git a/drivers/net/dsa/mt7530.c b/drivers/net/dsa/mt7530.c
-index 7e285aa9bd7c..a3f3ba95c55b 100644
 --- a/drivers/net/dsa/mt7530.c
 +++ b/drivers/net/dsa/mt7530.c
-@@ -425,7 +425,7 @@ mt7530_fdb_write(struct mt7530_priv *priv, u16 vid,
+@@ -425,7 +425,7 @@ mt7530_fdb_write(struct mt7530_priv *pri
  }
  
  static int
@@ -31,7 +29,7 @@ index 7e285aa9bd7c..a3f3ba95c55b 100644
  {
  	struct mt7530_priv *priv = ds->priv;
  	u32 ncpo1, ssc_delta, trgint, i, xtal;
-@@ -1386,13 +1386,111 @@ mt7530_setup(struct dsa_switch *ds)
+@@ -1447,13 +1447,111 @@ mt7530_setup(struct dsa_switch *ds)
  	return 0;
  }
  
@@ -144,7 +142,7 @@ index 7e285aa9bd7c..a3f3ba95c55b 100644
  	switch (port) {
  	case 0: /* Internal phy */
  	case 1:
-@@ -1405,35 +1503,24 @@ static void mt7530_phylink_mac_config(struct dsa_switch *ds, int port,
+@@ -1466,35 +1564,24 @@ static void mt7530_phylink_mac_config(st
  	case 5: /* 2nd cpu port with phy of port 0 or 4 / external phy */
  		if (priv->p5_interface == state->interface)
  			break;
@@ -187,7 +185,7 @@ index 7e285aa9bd7c..a3f3ba95c55b 100644
  		dev_err(ds->dev, "%s: unsupported port: %i\n", __func__, port);
  		return;
  	}
-@@ -1494,38 +1581,14 @@ static void mt7530_phylink_mac_link_up(struct dsa_switch *ds, int port,
+@@ -1555,38 +1642,14 @@ static void mt7530_phylink_mac_link_up(s
  	mt7530_port_set_status(priv, port, 1);
  }
  
@@ -229,7 +227,7 @@ index 7e285aa9bd7c..a3f3ba95c55b 100644
  		linkmode_zero(supported);
  		return;
  	}
-@@ -1596,12 +1659,36 @@ mt7530_phylink_mac_link_state(struct dsa_switch *ds, int port,
+@@ -1657,12 +1720,36 @@ mt7530_phylink_mac_link_state(struct dsa
  	return 1;
  }
  
@@ -269,10 +267,10 @@ index 7e285aa9bd7c..a3f3ba95c55b 100644
  	.get_ethtool_stats	= mt7530_get_ethtool_stats,
  	.get_sset_count		= mt7530_get_sset_count,
  	.port_enable		= mt7530_port_enable,
-@@ -1616,16 +1703,37 @@ static const struct dsa_switch_ops mt7530_switch_ops = {
- 	.port_vlan_prepare	= mt7530_port_vlan_prepare,
- 	.port_vlan_add		= mt7530_port_vlan_add,
+@@ -1679,16 +1766,37 @@ static const struct dsa_switch_ops mt753
  	.port_vlan_del		= mt7530_port_vlan_del,
+ 	.port_mirror_add	= mt7530_port_mirror_add,
+ 	.port_mirror_del	= mt7530_port_mirror_del,
 -	.phylink_validate	= mt7530_phylink_validate,
 +	.phylink_validate	= mt753x_phylink_validate,
  	.phylink_mac_link_state = mt7530_phylink_mac_link_state,
@@ -311,7 +309,7 @@ index 7e285aa9bd7c..a3f3ba95c55b 100644
  	{ /* sentinel */ },
  };
  MODULE_DEVICE_TABLE(of, mt7530_of_match);
-@@ -1663,8 +1771,19 @@ mt7530_probe(struct mdio_device *mdiodev)
+@@ -1726,8 +1834,19 @@ mt7530_probe(struct mdio_device *mdiodev
  	/* Get the hardware identifier from the devicetree node.
  	 * We will need it for some of the clock and regulator setup.
  	 */
@@ -333,8 +331,6 @@ index 7e285aa9bd7c..a3f3ba95c55b 100644
  
  	if (priv->id == ID_MT7530) {
  		priv->core_pwr = devm_regulator_get(&mdiodev->dev, "core");
-diff --git a/drivers/net/dsa/mt7530.h b/drivers/net/dsa/mt7530.h
-index ccb9da8cad0d..aac86e4fc148 100644
 --- a/drivers/net/dsa/mt7530.h
 +++ b/drivers/net/dsa/mt7530.h
 @@ -11,7 +11,7 @@
@@ -346,7 +342,7 @@ index ccb9da8cad0d..aac86e4fc148 100644
  	ID_MT7530 = 0,
  	ID_MT7621 = 1,
  };
-@@ -428,6 +428,32 @@ static const char *p5_intf_modes(unsigned int p5_interface)
+@@ -433,6 +433,32 @@ static const char *p5_intf_modes(unsigne
  	}
  }
  
@@ -379,7 +375,7 @@ index ccb9da8cad0d..aac86e4fc148 100644
  /* struct mt7530_priv -	This is the main data structure for holding the state
   *			of the driver
   * @dev:		The device pointer
-@@ -455,6 +481,7 @@ struct mt7530_priv {
+@@ -460,6 +486,7 @@ struct mt7530_priv {
  	struct regulator	*core_pwr;
  	struct regulator	*io_pwr;
  	struct gpio_desc	*reset;
