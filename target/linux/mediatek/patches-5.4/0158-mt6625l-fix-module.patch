@@ -1,0 +1,749 @@
+From 14936552268aca124613f7c81a0dc41b3d8e5e00 Mon Sep 17 00:00:00 2001
+From: Alexey Loukianov <lx2@lexa2.ru>
+Date: Sat, 19 Oct 2019 04:55:19 +0300
+Subject: [PATCH] mt6625l: fix building as a module
+
+Signed-off-by: Alexey Loukianov <lx2@lexa2.ru>
+---
+ drivers/misc/Makefile                         |  2 +-
+ drivers/misc/mediatek/btif/Makefile           |  4 +
+ drivers/misc/mediatek/btif/common/Makefile    |  6 +-
+ drivers/misc/mediatek/btif/common/mtk_btif.c  |  1 +
+ .../misc/mediatek/btif/common/mtk_btif_exp.c  |  1 +
+ drivers/misc/mediatek/connectivity/Kconfig    |  1 +
+ drivers/misc/mediatek/connectivity/Makefile   | 12 +--
+ .../common/common_detect/Makefile             | 44 +++++++--
+ .../common/common_detect/drv_init/Makefile    |  2 +-
+ .../common_detect/drv_init/conn_drv_init.c    | 16 +--
+ .../common_detect/drv_init/wlan_drv_init.c    |  5 +-
+ .../common/common_detect/wmt_detect.c         | 20 ++--
+ .../connectivity/common/conn_soc/Makefile     | 99 ++++++++++++-------
+ .../common/conn_soc/core/Makefile             |  6 +-
+ .../core}/mtk_wcn_stub_alps.c                 |  2 +-
+ .../core}/wmt_stp_exp.c                       |  0
+ .../include}/wmt_stp_exp.h                    |  0
+ .../common/conn_soc/linux/Makefile            |  2 +-
+ .../common/conn_soc/linux/pri/wmt_dev.c       |  2 +-
+ .../common/conn_soc/linux/pub/Makefile        | 10 +-
+ .../common/conn_soc/linux/pub/osal.c          |  4 +
+ .../conn_soc/linux/pub/wmt_chrdev_wifi.c      |  3 +
+ .../conn_soc/mt7623/mtk_wcn_consys_hw.c       |  8 +-
+ .../connectivity/wlan/gen2/os/linux/gl_init.c |  2 +
+ .../connectivity/wlan/gen2/os/linux/gl_kal.c  | 14 ++-
+ .../connectivity/wlan/gen2/os/linux/gl_proc.c |  3 +-
+ .../connectivity/wlan/gen2/os/linux/gl_rst.c  |  1 -
+ .../wlan/gen2/os/linux/platform.c             |  4 +-
+ 28 files changed, 187 insertions(+), 87 deletions(-)
+ rename drivers/misc/mediatek/connectivity/common/{common_detect => conn_soc/core}/mtk_wcn_stub_alps.c (99%)
+ rename drivers/misc/mediatek/connectivity/common/{common_detect => conn_soc/core}/wmt_stp_exp.c (100%)
+ rename drivers/misc/mediatek/connectivity/common/{common_detect => conn_soc/include}/wmt_stp_exp.h (100%)
+
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 8f118f45d36c..4938c14af5a1 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -57,4 +57,4 @@ obj-y				+= cardreader/
+ obj-$(CONFIG_PVPANIC)   	+= pvpanic.o
+ obj-$(CONFIG_HABANA_AI)		+= habanalabs/
+ obj-$(CONFIG_XILINX_SDFEC)	+= xilinx_sdfec.o
+-obj-$(CONFIG_MTK_COMBO)	+= mediatek/
++obj-$(CONFIG_MTK_BTIF)		+= mediatek/
+diff --git a/drivers/misc/mediatek/btif/Makefile b/drivers/misc/mediatek/btif/Makefile
+index 2be3ab66f426..e0fc286acd5b 100644
+--- a/drivers/misc/mediatek/btif/Makefile
++++ b/drivers/misc/mediatek/btif/Makefile
+@@ -30,4 +30,8 @@ else
+     PWD  := $(shell pwd)
+ default:
+ 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
++clean:
++	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
++kernel:
++	$(MAKE) -C $(KERNELDIR) M=$(PWD)
+ endif
+diff --git a/drivers/misc/mediatek/btif/common/Makefile b/drivers/misc/mediatek/btif/common/Makefile
+index 61e9d4ea9e89..918532c42a1d 100644
+--- a/drivers/misc/mediatek/btif/common/Makefile
++++ b/drivers/misc/mediatek/btif/common/Makefile
+@@ -18,8 +18,8 @@ ifneq ($(KERNELRELEASE),)
+ 	ccflags-y += -I$(src)/inc
+ 	ccflags-y += -I$(src)/plat_inc
+ 
+-	obj-y += btif.o
+-	btif-y	:= mtk_btif.o mtk_btif_exp.o btif_dma_plat.o btif_plat.o
++	obj-$(CONFIG_MTK_BTIF) += btif.o
++	btif-objs := mtk_btif.o mtk_btif_exp.o btif_dma_plat.o btif_plat.o
+ 
+ # Otherwise we were called directly from the command
+ # line; invoke the kernel build system.
+@@ -28,4 +28,6 @@ else
+     PWD  := $(shell pwd)
+ default:
+ 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
++clean:
++	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
+ endif
+diff --git a/drivers/misc/mediatek/btif/common/mtk_btif.c b/drivers/misc/mediatek/btif/common/mtk_btif.c
+index 405884324cec..7d5b65ddcef7 100644
+--- a/drivers/misc/mediatek/btif/common/mtk_btif.c
++++ b/drivers/misc/mediatek/btif/common/mtk_btif.c
+@@ -2262,6 +2262,7 @@ int mtk_btif_rxd_be_blocked_flag_get(void)
+ 	}
+ 	return ret;
+ }
++EXPORT_SYMBOL(mtk_btif_rxd_be_blocked_flag_get);
+ #endif
+ static int btif_rx_thread(void *p_data)
+ {
+diff --git a/drivers/misc/mediatek/btif/common/mtk_btif_exp.c b/drivers/misc/mediatek/btif/common/mtk_btif_exp.c
+index c0df44558357..b7f505d29f25 100644
+--- a/drivers/misc/mediatek/btif/common/mtk_btif_exp.c
++++ b/drivers/misc/mediatek/btif/common/mtk_btif_exp.c
+@@ -505,6 +505,7 @@ bool mtk_wcn_btif_parser_wmt_evt(unsigned long u_id,
+ 
+ 	return b_ret;
+ }
++EXPORT_SYMBOL(mtk_wcn_btif_parser_wmt_evt);
+ 
+ /**********End of Debug Purpose API declearation**********/
+ 
+diff --git a/drivers/misc/mediatek/connectivity/Kconfig b/drivers/misc/mediatek/connectivity/Kconfig
+index 4a944b1f0ebe..cd239cd7c5d9 100644
+--- a/drivers/misc/mediatek/connectivity/Kconfig
++++ b/drivers/misc/mediatek/connectivity/Kconfig
+@@ -1,5 +1,6 @@
+ config MTK_COMBO
+ 	tristate "MediaTek Connectivity Combo Chip Support"
++	select MTK_BTIF
+ 	help
+ 	  MTK connectivity combo chip driver for MT66xx
+ 
+diff --git a/drivers/misc/mediatek/connectivity/Makefile b/drivers/misc/mediatek/connectivity/Makefile
+index 5a2833d90ef0..1b6d1ef64268 100644
+--- a/drivers/misc/mediatek/connectivity/Makefile
++++ b/drivers/misc/mediatek/connectivity/Makefile
+@@ -15,21 +15,21 @@
+ # If KERNELRELEASE is defined, we've been invoked from the
+ # kernel build system and can use its language.
+ ifneq ($(KERNELRELEASE),)
+-subdir-ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE
++    subdir-ccflags-y += -DMTK_WCN_REMOVE_KERNEL_MODULE
+ ifeq ($(CONFIG_ARM64), y)
+-subdir-ccflags-y += -D CONFIG_MTK_WCN_ARM64
++    subdir-ccflags-y += -DCONFIG_MTK_WCN_ARM64
+ endif
+ 
+ #ifeq ($(CONFIG_MTK_CONN_LTE_IDC_SUPPORT),y)
+-#    subdir-ccflags-y += -D WMT_IDC_SUPPORT=1
++#    subdir-ccflags-y += -DWMT_IDC_SUPPORT=1
+ #else
+-#    subdir-ccflags-y += -D WMT_IDC_SUPPORT=0
++#    subdir-ccflags-y += -DWMT_IDC_SUPPORT=0
+ #endif
+-    subdir-ccflags-y += -D MTK_WCN_WMT_STP_EXP_SYMBOL_ABSTRACT
++    subdir-ccflags-y += -DMTK_WCN_WMT_STP_EXP_SYMBOL_ABSTRACT
+ 
+     obj-y += common/
+     obj-$(CONFIG_MTK_COMBO_WIFI) += wlan/
+-	obj-n := dummy.o
++    obj-n := dummy.o
+ 
+ # Otherwise we were called directly from the command line;
+ # invoke the kernel build system.
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/Makefile b/drivers/misc/mediatek/connectivity/common/common_detect/Makefile
+index 8d7dc690affd..6db47c329c02 100644
+--- a/drivers/misc/mediatek/connectivity/common/common_detect/Makefile
++++ b/drivers/misc/mediatek/connectivity/common/common_detect/Makefile
+@@ -1,5 +1,4 @@
+ subdir-ccflags-y += -I$(srctree)/arch/arm/mach-$(MTK_PLATFORM)/$(ARCH_MTK_PROJECT)/dct/dct
+-subdir-ccflags-y += -DWMT_PLAT_ALPS=1
+ 
+ COMBO_CHIP_SUPPORT := false
+ ifneq ($(filter "MT6620E3",$(CONFIG_MTK_COMBO_CHIP)),)
+@@ -24,8 +23,6 @@ endif
+ 
+ ifeq ($(CONFIG_MTK_COMBO),y)
+ 	ccflags-y += -I$(src)/drv_init/inc
+-	obj-y += mtk_wcn_stub_alps.o
+-	obj-y += wmt_stp_exp.o
+ 	obj-y += wmt_gpio.o
+ 
+ 	obj-y += wmt_detect.o
+@@ -36,12 +33,41 @@ ifeq ($(CONFIG_MTK_COMBO),y)
+ endif
+ 
+ ifeq ($(CONFIG_MTK_COMBO),m)
+-	obj-y += mtk_wcn_stub_alps.o
+-	obj-y += wmt_stp_exp.o
+-	obj-y += wmt_gpio.o
++	ccflags-y += -I$(src)/drv_init/inc
++	ccflags-y += -I$(src)
++
++ifneq ($(filter "MT6630",$(CONFIG_MTK_COMBO_CHIP)),)
++	ccflags-y += -D MTK_WCN_WLAN_GEN3
++endif
++ifneq ($(filter "CONSYS_6797",$(CONFIG_MTK_COMBO_CHIP)),)
++	ccflags-y += -D MTK_WCN_WLAN_GEN3
++else ifneq ($(filter "CONSYS_%",$(CONFIG_MTK_COMBO_CHIP)),)
++	ccflags-y += -D MTK_WCN_WLAN_GEN2
++endif
++
++
++	DRV_INIT_DIR := drv_init/
++
++	DRV_INIT_OBJS := \
++						$(DRV_INIT_DIR)common_drv_init.o \
++						$(DRV_INIT_DIR)bluetooth_drv_init.o \
++						$(DRV_INIT_DIR)conn_drv_init.o \
++						$(DRV_INIT_DIR)wlan_drv_init.o
++#						$(DRV_INIT_DIR)gps_drv_init.o \
++#						$(DRV_INIT_DIR)fm_drv_init.o \
++
++#	obj-($(CONFIG_MTK_COMBO_ANT)) += ant_drv_init.o
+ 
+ 	obj-$(CONFIG_MTK_COMBO) += mtk_wmt_detect.o
+-	mtk_wmt_detect-objs := wmt_detect.o
+-	mtk_wmt_detect-objs += sdio_detect.o
+-	mtk_wmt_detect-objs += wmt_detect_pwr.o
++
++#							wmt_stp_exp.o \
++#							mtk_wcn_stub_alps.o \
++
++	mtk_wmt_detect-objs := \
++							wmt_detect.o \
++							sdio_detect.o \
++							wmt_detect_pwr.o \
++							wmt_gpio.o
++
++	mtk_wmt_detect-objs += $(DRV_INIT_OBJS)
+ endif
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/Makefile b/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/Makefile
+index bb84384b9a24..f4337fbe9be8 100644
+--- a/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/Makefile
++++ b/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/Makefile
+@@ -1,4 +1,4 @@
+-ifeq ($(CONFIG_MTK_COMBO),y)
++ifneq ($(CONFIG_MTK_COMBO),)
+ 	ccflags-y += -I$(src)/inc/
+ 	ccflags-y += -I$(src)/../
+ 
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/conn_drv_init.c b/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/conn_drv_init.c
+index 8112d2a1d95e..08e7991df382 100644
+--- a/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/conn_drv_init.c
++++ b/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/conn_drv_init.c
+@@ -51,30 +51,34 @@ int do_connectivity_driver_init(int chip_id)
+ 		return i_ret;
+ 	}
+ 
++#if defined(CONFIG_MTK_COMBO_BT) || defined(CONFIG_MTK_COMBO_BT_MODULE)
+ 	tmp_ret = do_bluetooth_drv_init(chip_id);
+ 	i_ret += tmp_ret;
+ 	if (tmp_ret)
+ 		WMT_DETECT_ERR_FUNC("do common driver init failed, ret:%d\n", tmp_ret);
++#endif
+ 
+-	tmp_ret = do_gps_drv_init(chip_id);
++/*	tmp_ret = do_gps_drv_init(chip_id);
+ 	i_ret += tmp_ret;
+ 	if (tmp_ret)
+-		WMT_DETECT_ERR_FUNC("do common driver init failed, ret:%d\n", tmp_ret);
++		WMT_DETECT_ERR_FUNC("do common driver init failed, ret:%d\n", tmp_ret); */
+ 
+-	tmp_ret = do_fm_drv_init(chip_id);
++/*	tmp_ret = do_fm_drv_init(chip_id);
+ 	i_ret += tmp_ret;
+ 	if (tmp_ret)
+-		WMT_DETECT_ERR_FUNC("do fm module init failed, ret:%d\n", tmp_ret);
++		WMT_DETECT_ERR_FUNC("do fm module init failed, ret:%d\n", tmp_ret); */
+ 
++#if defined(CONFIG_MTK_COMBO_WIFI) || defined(CONFIG_MTK_COMBO_WIFI_MODULE)
+ 	tmp_ret = do_wlan_drv_init(chip_id);
+ 	i_ret += tmp_ret;
+ 	if (tmp_ret)
+ 		WMT_DETECT_ERR_FUNC("do wlan module init failed, ret:%d\n", tmp_ret);
++#endif
+ 
+-	tmp_ret = do_ant_drv_init(chip_id);
++/*	tmp_ret = do_ant_drv_init(chip_id);
+ 	i_ret += tmp_ret;
+ 	if (tmp_ret)
+-		WMT_DETECT_ERR_FUNC("do ANT module init failed, ret:%d\n", tmp_ret);
++		WMT_DETECT_ERR_FUNC("do ANT module init failed, ret:%d\n", tmp_ret); */
+ 
+ 	return i_ret;
+ }
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/wlan_drv_init.c b/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/wlan_drv_init.c
+index 5b0d039a4a42..664544b91106 100644
+--- a/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/wlan_drv_init.c
++++ b/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/wlan_drv_init.c
+@@ -25,7 +25,7 @@ int do_wlan_drv_init(int chip_id)
+ {
+ 	int i_ret = 0;
+ 
+-#ifdef CONFIG_MTK_COMBO_WIFI
++#if defined(CONFIG_MTK_COMBO_WIFI) || defined(CONFIG_MTK_COMBO_WIFI_MODULE)
+ 	int ret = 0;
+ 
+ 	WMT_DETECT_INFO_FUNC("start to do wlan module init 0x%x\n", chip_id);
+@@ -52,9 +52,12 @@ int do_wlan_drv_init(int chip_id)
+ 	default:
+ #ifdef MTK_WCN_WLAN_GEN2
+ 		/* WLAN driver init */
++/* A call to mtk_wcn_wlan_gen2_init is only required if wifi support is not compiled as module */
++#if defined(CONFIG_MTK_COMBO_WIFI)
+ 		ret = mtk_wcn_wlan_gen2_init();
+ 		WMT_DETECT_INFO_FUNC("WLAN-GEN2 driver init, ret:%d\n", ret);
+ 		i_ret += ret;
++#endif
+ #else
+ 		WMT_DETECT_ERR_FUNC("WLAN-GEN2 driver is not supported, please check CONFIG_MTK_COMBO_CHIP\n");
+ 		i_ret = -1;
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/wmt_detect.c b/drivers/misc/mediatek/connectivity/common/common_detect/wmt_detect.c
+index bd3fb6b0bb62..49831456ccd1 100644
+--- a/drivers/misc/mediatek/connectivity/common/common_detect/wmt_detect.c
++++ b/drivers/misc/mediatek/connectivity/common/common_detect/wmt_detect.c
+@@ -271,9 +271,9 @@ static struct platform_driver wmt_detect_driver = {
+ 		.of_match_table = wmt_detect_match,
+ 	},
+ };
++/*module_platform_driver(wmt_detect_driver);*/
+ #endif
+ 
+-/*module_platform_driver(wmt_detect_driver);*/
+ static int __init wmt_detect_driver_init(void)
+ {
+ 	dev_t devID = MKDEV(gWmtDetectMajor, 0);
+@@ -346,6 +346,15 @@ static void __exit wmt_detect_driver_exit(void)
+ {
+ 	dev_t dev = MKDEV(gWmtDetectMajor, 0);
+ 
++#ifdef MTK_WCN_COMBO_CHIP_SUPPORT
++	platform_driver_unregister(&wmt_detect_driver);
++#endif
++
++#if !(MTK_WCN_REMOVE_KO)
++/*deinit SDIO-DETECT module*/
++	sdio_detect_exit();
++#endif
++
+ 	if (pDetectDev) {
+ 		device_destroy(pDetectClass, dev);
+ 		pDetectDev = NULL;
+@@ -359,15 +368,6 @@ static void __exit wmt_detect_driver_exit(void)
+ 	cdev_del(&gWmtDetectCdev);
+ 	unregister_chrdev_region(dev, WMT_DETECT_DEV_NUM);
+ 
+-#if !(MTK_WCN_REMOVE_KO)
+-/*deinit SDIO-DETECT module*/
+-	sdio_detect_exit();
+-#endif
+-
+-#ifdef MTK_WCN_COMBO_CHIP_SUPPORT
+-	platform_driver_unregister(&wmt_detect_driver);
+-#endif
+-
+ 	WMT_DETECT_INFO_FUNC("done\n");
+ }
+ 
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/Makefile b/drivers/misc/mediatek/connectivity/common/conn_soc/Makefile
+index 286bfd4bfed3..e2dd2e42e432 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/Makefile
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/Makefile
+@@ -3,13 +3,8 @@ subdir-ccflags-y += \
+ 	-I$(src)/linux/pri/include \
+ 	-I$(src)/core/include \
+ 	-I$(src)/include \
+-	-I$(src)/../common_detect \
+-	-I$(srctree)/drivers/misc/mediatek/btif/common/inc
+-
+-subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/eccci/
+-subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/eccci/$(MTK_PLATFORM)
+-subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/eemcs/
+-subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/conn_md/include
++	-I$(srctree)/drivers/misc/mediatek/btif/common/inc \
++	-I$(src)/$(subst ",,$(CONFIG_MTK_PLATFORM))/include
+ 
+ EXT_FLAG=_soc
+ COMMON_SRC_PATH := $(src)
+@@ -20,46 +15,80 @@ subdir-ccflags-y += -D CFG_WMT_READ_EFUSE_VCN33
+ endif
+ 
+ ifeq ($(CONFIG_MTK_COMBO), m)
+-# WMT DRIVER
+-obj-$(CONFIG_MTK_COMBO) += mtk_stp_wmt$(EXT_FLAG).o
+-# WMT DRIVER-core part
+-mtk_stp_wmt$(EXT_FLAG)-objs	:= core/wmt_core.o core/wmt_ctrl.o core/wmt_func.o core/wmt_ic_soc.o core/wmt_lib.o core/wmt_conf.o
+-
+-
+-# WMT DRIVER-linux private part
+-mtk_stp_wmt$(EXT_FLAG)-objs	+= linux/pri/wmt_dev.o linux/pri/wmt_exp.o
+-mtk_stp_wmt$(EXT_FLAG)-objs	+= linux/pri/stp_btif.o
+-
+-
+-# WMT DRIVER-OSAL
+-mtk_stp_wmt$(EXT_FLAG)-objs	+= linux/pub/osal.o linux/pub/bgw_desense.o
+-# WMT DRIVER-platform implementation
+-# ccflags-y += -D WMT_PLAT_ALPS
+-# mtk_stp_wmt$(EXT_FLAG)-objs += platform/alps/wmt_plat_alps.o
+ 
+-# mtk_stp_wmt$(EXT_FLAG)-objs += platform/alps/mtk_wcn_consys_hw.o
+-
+-
+-mtk_stp_wmt$(EXT_FLAG)-objs	+= linux/pri/stp_exp.o core/stp_core.o core/psm_core.o core/btm_core.o linux/pri/stp_dbg.o
++# ---------------------------------------------------
++# Directory List
++# ---------------------------------------------------
++CORE_DIR      := core/
++LINUX_PRI_DIR := linux/pri/
++LINUX_PUB_DIR := linux/pub/
++
++# ---------------------------------------------------
++# Objects List
++# ---------------------------------------------------
++CORE_OBJS := 	$(CORE_DIR)wmt_core.o \
++				$(CORE_DIR)wmt_ctrl.o \
++				$(CORE_DIR)wmt_func.o \
++				$(CORE_DIR)wmt_ic_soc.o \
++				$(CORE_DIR)wmt_lib.o \
++				$(CORE_DIR)wmt_conf.o \
++				$(CORE_DIR)btm_core.o \
++				$(CORE_DIR)dbg_core.o \
++				$(CORE_DIR)psm_core.o \
++				$(CORE_DIR)stp_core.o \
++				$(CORE_DIR)wmt_stp_exp.o \
++				$(CORE_DIR)mtk_wcn_stub_alps.o
++
++
++LINUX_PRI_OBJS := 	$(LINUX_PRI_DIR)stp_btif.o \
++					$(LINUX_PRI_DIR)stp_dbg.o \
++					$(LINUX_PRI_DIR)stp_exp.o \
++					$(LINUX_PRI_DIR)wmt_dev.o \
++					$(LINUX_PRI_DIR)wmt_exp.o
++
++
++LINUX_PUB_OBJS :=	$(LINUX_PUB_DIR)osal.o \
++					$(LINUX_PUB_DIR)bgw_desense.o \
++					$(LINUX_PUB_DIR)wmt_idc.o
++
++
++ccflags-y += -DWMT_CREATE_NODE_DYNAMIC=1
++ccflags-y += -DMTK_BT_HCI=1
++ccflags-y += -DMTK_WCN_WMT_STP_EXP_SYMBOL_ABSTRACT
++ifeq ($(CONFIG_MTK_TC1_FEATURE), y)
++    ccflags-y += -DCFG_TC1_FEATURE=1
++else
++    ccflags-y += -DCFG_TC1_FEATURE=0
++endif
++ifeq ($(CONFIG_MTK_CONN_LTE_IDC_SUPPORT),y)
++    ccflags-y += -DWMT_IDC_SUPPORT=1
++else
++    ccflags-y += -DWMT_IDC_SUPPORT=0
++endif
+ 
+-# WMT stub part (built-in kernel image)
+-# obj-y			+= platform/alps/mtk_wcn_consys_stub_alps.o
++# WMT LIBRARY DRIVER
++obj-$(CONFIG_MTK_COMBO) += mtk_stp_wmt$(EXT_FLAG).o
+ 
++mtk_stp_wmt$(EXT_FLAG)-objs	:= 	$(CORE_OBJS) \
++	 	 	 	 	 	 	 	$(LINUX_PRI_OBJS) \
++								$(LINUX_PUB_OBJS)
+ 
++mtk_stp_wmt$(EXT_FLAG)-objs += $(subst ",,$(CONFIG_MTK_PLATFORM))/wmt_plat_alps.o
++mtk_stp_wmt$(EXT_FLAG)-objs += $(subst ",,$(CONFIG_MTK_PLATFORM))/mtk_wcn_consys_hw.o
+ 
++# WMT LIBRARY BT CONTROL DRIVER
+ obj-$(CONFIG_MTK_COMBO_BT) 	+= mtk_stp_bt$(EXT_FLAG).o
+-mtk_stp_bt$(EXT_FLAG)-objs	:= linux/pub/stp_chrdev_bt.o
+-
++mtk_stp_bt$(EXT_FLAG)-objs	:= $(LINUX_PUB_DIR)stp_chrdev_bt.o
+ 
++# WMT LIBRARY WIFI CONTROL DRIVER
+ obj-$(CONFIG_MTK_COMBO_WIFI) += mtk_wmt_wifi$(EXT_FLAG).o
+-mtk_wmt_wifi$(EXT_FLAG)-objs := linux/pub/wmt_chrdev_wifi.o
++mtk_wmt_wifi$(EXT_FLAG)-objs := $(LINUX_PUB_DIR)wmt_chrdev_wifi.o
+ 
+ endif
+ 
+ ifeq ($(CONFIG_MTK_COMBO), y)
+-# subdir-ccflags-y += -D WMT_PLAT_ALPS
++subdir-ccflags-y += -DMTK_WCN_BUILT_IN_DRIVER
+ obj-y += core/
+ obj-y += linux/
+-#obj-y += $(subst ",,$(CONFIG_MTK_PLATFORM))/
+-obj-y += mt7623/
++obj-y += $(subst ",,$(CONFIG_MTK_PLATFORM))/
+ endif
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/core/Makefile b/drivers/misc/mediatek/connectivity/common/conn_soc/core/Makefile
+index 9df71b9e163e..b1a75ec32fca 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/core/Makefile
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/core/Makefile
+@@ -6,7 +6,7 @@ ccflags-y += \
+ 	-I$(src)/../core/include \
+ 	-I$(src)/../include \
+ 	-I$(src)/../../common_detect \
+-	-I$(srctree)/drivers/misc/mediatek/btif/common/inc \
++	-I$(srctree)/drivers/misc/mediatek/btif/common/inc
+ 
+ obj-y += wmt_core.o \
+          wmt_ctrl.o \
+@@ -17,6 +17,8 @@ obj-y += wmt_core.o \
+          btm_core.o \
+          dbg_core.o \
+          psm_core.o \
+-         stp_core.o
++         stp_core.o \
++         mtk_wcn_stub_alps.o \
++         wmt_stp_exp.o
+ 
+ endif
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/mtk_wcn_stub_alps.c b/drivers/misc/mediatek/connectivity/common/conn_soc/core/mtk_wcn_stub_alps.c
+similarity index 99%
+rename from drivers/misc/mediatek/connectivity/common/common_detect/mtk_wcn_stub_alps.c
+rename to drivers/misc/mediatek/connectivity/common/conn_soc/core/mtk_wcn_stub_alps.c
+index fa8d437686f2..dee7a6282b4e 100644
+--- a/drivers/misc/mediatek/connectivity/common/common_detect/mtk_wcn_stub_alps.c
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/core/mtk_wcn_stub_alps.c
+@@ -61,7 +61,7 @@ do { \
+ #include <linux/of.h>
+ #include <linux/of_irq.h>
+ #include <mtk_wcn_cmb_stub.h>
+-#include "wmt_detect.h"
++/* #include "wmt_detect.h" */
+ 
+ 
+ /*******************************************************************************
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/wmt_stp_exp.c b/drivers/misc/mediatek/connectivity/common/conn_soc/core/wmt_stp_exp.c
+similarity index 100%
+rename from drivers/misc/mediatek/connectivity/common/common_detect/wmt_stp_exp.c
+rename to drivers/misc/mediatek/connectivity/common/conn_soc/core/wmt_stp_exp.c
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/wmt_stp_exp.h b/drivers/misc/mediatek/connectivity/common/conn_soc/include/wmt_stp_exp.h
+similarity index 100%
+rename from drivers/misc/mediatek/connectivity/common/common_detect/wmt_stp_exp.h
+rename to drivers/misc/mediatek/connectivity/common/conn_soc/include/wmt_stp_exp.h
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/Makefile b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/Makefile
+index 905207118938..dfb1e52f1473 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/Makefile
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/Makefile
+@@ -3,4 +3,4 @@ ifeq ($(CONFIG_MTK_COMBO), y)
+ obj-y += pub/
+ obj-y += pri/
+ 
+-endif
+\ No newline at end of file
++endif
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pri/wmt_dev.c b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pri/wmt_dev.c
+index f70c88796f09..83a50e24f8fa 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pri/wmt_dev.c
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pri/wmt_dev.c
+@@ -1494,7 +1494,7 @@ INT32 wmt_dev_read_file(PUINT8 pName, const PPUINT8 ppBufPtr, INT32 offset, INT3
+ 		}
+ 
+                 fs=get_fs();
+-		read_len = vfs_read(fd, pBuf + padSzBuf, file_len, &fd->f_pos);
++		read_len = kernel_read(fd, pBuf + padSzBuf, file_len, &fd->f_pos);
+                 set_fs(fs);
+ 		if (read_len != file_len)
+ 			WMT_WARN_FUNC("read abnormal: read_len(%d), file_len(%d)\n", read_len, file_len);
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/Makefile b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/Makefile
+index eb37baf87b02..d909baff76cd 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/Makefile
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/Makefile
+@@ -21,7 +21,13 @@ endif
+ obj-y += osal.o \
+          bgw_desense.o \
+          wmt_idc.o
+-obj-$(CONFIG_MTK_COMBO_BT)		+= stp_chrdev_bt.o
+-obj-$(CONFIG_MTK_COMBO_WIFI)	+= wmt_chrdev_wifi.o
++
++ifneq ($(CONFIG_MTK_COMBO_BT),)
++    obj-$(CONFIG_MTK_COMBO_BT) += stp_chrdev_bt.o
++endif
++
++ifneq ($(CONFIG_MTK_COMBO_WIFI),)
++    obj-y += wmt_chrdev_wifi.o
++endif
+ 
+ endif
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/osal.c b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/osal.c
+index ef65bbec796c..8fe34f8f1b14 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/osal.c
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/osal.c
+@@ -308,7 +308,11 @@ _osal_inline_ UINT16 osal_crc16(const UINT8 *buffer, const UINT32 length)
+ 
+ _osal_inline_ VOID osal_thread_show_stack(P_OSAL_THREAD pThread)
+ {
++#ifdef MTK_WCN_BUILT_IN_DRIVER
+ 	return show_stack(pThread->pThread, NULL);
++#else
++	return;
++#endif
+ }
+ 
+ /*
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/wmt_chrdev_wifi.c b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/wmt_chrdev_wifi.c
+index 3c7b2969c98a..906f2728a70f 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/wmt_chrdev_wifi.c
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/wmt_chrdev_wifi.c
+@@ -46,6 +46,9 @@ MODULE_LICENSE("Dual BSD/GPL");
+ 
+ UINT32 gDbgLevel = WIFI_LOG_DBG;
+ 
++UINT32 g_IsNeedDoChipReset = 0;
++EXPORT_SYMBOL(g_IsNeedDoChipReset);
++
+ #define WIFI_DBG_FUNC(fmt, arg...)\
+ 	do {if (gDbgLevel >= WIFI_LOG_DBG) printk(PFX "%s: " fmt, __func__ , ##arg); } while (0)
+ #define WIFI_INFO_FUNC(fmt, arg...)\
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/mtk_wcn_consys_hw.c b/drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/mtk_wcn_consys_hw.c
+index eabb4c8b3ec0..0869301a09bc 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/mtk_wcn_consys_hw.c
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/mtk_wcn_consys_hw.c
+@@ -90,7 +90,8 @@ static struct regmap *pmic_regmap;
+ #define DYNAMIC_DUMP_GROUP_NUM 5
+ 
+ static const struct of_device_id apwmt_of_ids[] = {
+-	{.compatible = "mediatek,mt7623-consys",}
++	{.compatible = "mediatek,mt7623-consys"},
++	{}
+ };
+ MODULE_DEVICE_TABLE(of, apwmt_of_ids);
+ 
+@@ -117,7 +118,7 @@ static INT32 mtk_wmt_probe(struct platform_device *pdev)
+ 		WMT_PLAT_ERR_FUNC("Wmt cannot find pinctrl!\n");
+ 		goto set_pin_exit;
+ 	}
+-	mt6625_spi_default = pinctrl_lookup_state(mt6625_spi_pinctrl, "consys_pins_default");
++	mt6625_spi_default = pinctrl_lookup_state(mt6625_spi_pinctrl, "default");
+ 	if (IS_ERR(mt6625_spi_default)) {
+ 		ret = PTR_ERR(mt6625_spi_default);
+ 		WMT_PLAT_ERR_FUNC("Wmt Cannot find pinctrl default!\n");
+@@ -508,6 +509,9 @@ INT32 mtk_wcn_consys_hw_wifi_paldo_ctrl(UINT32 enable)
+ }
+ 
+ #endif
++
++EXPORT_SYMBOL(mtk_wcn_consys_hw_wifi_paldo_ctrl);
++
+ INT32 mtk_wcn_consys_hw_vcn28_ctrl(UINT32 enable)
+ {
+ 	if (enable) {
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c
+index eb64c69d9207..e594a327fca8 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c
+@@ -1609,6 +1609,8 @@ static void createWirelessDevice(void)
+ 		goto free_wdev;
+ 	}
+ 
++	kalMemZero(wiphy_priv(prWiphy), sizeof(GLUE_INFO_T));
++
+ 	/* <1.3> configure wireless_dev & wiphy */
+ 	prWdev->iftype = NL80211_IFTYPE_STATION;
+ 	prWiphy->max_scan_ssids   = 1;    /* FIXME: for combo scan */
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+index 3a257c9f85c4..36226d1b7f46 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+@@ -944,7 +944,7 @@ WLAN_STATUS kalFirmwareLoad(IN P_GLUE_INFO_T prGlueInfo, OUT PVOID prBuf, IN UIN
+ 		goto error_read;
+ 	} else {
+ 		filp->f_pos = u4Offset;
+-		*pu4Size = vfs_read(filp, prBuf, *pu4Size, &filp->f_pos);
++		*pu4Size = kernel_read(filp, prBuf, *pu4Size, &filp->f_pos);
+ 	}
+ #endif
+ 
+@@ -3845,7 +3845,7 @@ UINT_32 kalFileRead(struct file *file, UINT_64 offset, UINT_8 *data, UINT_32 siz
+ 	oldfs = get_fs();
+ 	set_fs(get_ds());
+ 
+-	ret = vfs_read(file, data, size, &offset);
++	ret = kernel_read(file, data, size, &offset);
+ 
+ 	set_fs(oldfs);
+ 	return ret;
+@@ -3859,7 +3859,7 @@ UINT_32 kalFileWrite(struct file *file, UINT_64 offset, UINT_8 *data, UINT_32 si
+ 	oldfs = get_fs();
+ 	set_fs(get_ds());
+ 
+-	ret = vfs_write(file, data, size, &offset);
++	ret = kernel_write(file, data, size, &offset);
+ 
+ 	set_fs(oldfs);
+ 	return ret;
+@@ -4525,16 +4525,24 @@ INT_32 kalHaltLock(UINT_32 waitMs)
+ 
+ 			wlanExportGlueInfo(&prGlueInfo);
+ 
++#ifdef MTK_WCN_BUILT_IN_DRIVER
+ 			DBGLOG(INIT, ERROR,
+ 				"kalIoctl was executed longer than %u ms, show backtrace of tx_thread!\n",
+ 				kalGetTimeTick() - rHaltCtrl.u4HoldStart);
+ 			if (prGlueInfo)
+ 				show_stack(prGlueInfo->main_thread, NULL);
++#else
++			DBGLOG(INIT, ERROR,
++				"kalIoctl was executed longer than %u ms!\n",
++				kalGetTimeTick() - rHaltCtrl.u4HoldStart);
++#endif
+ 		} else {
+ 			DBGLOG(INIT, ERROR, "halt lock held by %s pid %d longer than %u ms!\n",
+ 				rHaltCtrl.owner->comm, rHaltCtrl.owner->pid,
+ 				kalGetTimeTick() - rHaltCtrl.u4HoldStart);
++#ifdef MTK_WCN_BUILT_IN_DRIVER
+ 			show_stack(rHaltCtrl.owner, NULL);
++#endif
+ 		}
+ 		return i4Ret;
+ 	}
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_proc.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_proc.c
+index 075045f547b7..0bbb903cbf23 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_proc.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_proc.c
+@@ -963,9 +963,10 @@ INT_32 procInitFs(VOID)
+ 
+ INT_32 procUninitProcFs(VOID)
+ {
++	remove_proc_entry(PROC_AUTO_PER_CFG, gprProcRoot);
++	remove_proc_entry(PROC_NEED_TX_DONE, gprProcRoot);
+ 	remove_proc_entry(PROC_DBG_LEVEL_NAME, gprProcRoot);
+ 	remove_proc_subtree(PROC_ROOT_NAME, init_net.proc_net);
+-	remove_proc_entry(PROC_AUTO_PER_CFG, gprProcRoot);
+ 	return 0;
+ }
+ 
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_rst.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_rst.c
+index f97db8a69fd2..f2c16bf560a5 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_rst.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_rst.c
+@@ -58,7 +58,6 @@
+ ********************************************************************************
+ */
+ BOOLEAN fgIsResetting = FALSE;
+-UINT_32 g_IsNeedDoChipReset = 0;
+ 
+ /*******************************************************************************
+ *                           P R I V A T E   D A T A
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/platform.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/platform.c
+index fba854cfd68e..3dace13dfb97 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/platform.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/platform.c
+@@ -410,7 +410,7 @@ static int nvram_read(char *filename, char *buf, ssize_t len, int offset)
+ 			}
+ 		}
+ 
+-		retLen = vfs_read(fd, buf, len, &fd->f_pos);
++		retLen = kernel_read(fd, buf, len, &fd->f_pos);
+ 
+ 	} while (FALSE);
+ 
+@@ -474,7 +474,7 @@ static int nvram_write(char *filename, char *buf, ssize_t len, int offset)
+ 			}
+ 		}
+ 
+-		retLen = vfs_write(fd, buf, len, &fd->f_pos);
++		retLen = kernel_write(fd, buf, len, &fd->f_pos);
+ 
+ 	} while (FALSE);
+ 

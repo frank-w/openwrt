@@ -1,0 +1,137 @@
+diff -ruN drivers.orig/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c	2020-03-24 21:51:49.545425446 +0800
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c	2020-03-24 21:56:17.448699847 +0800
+@@ -854,7 +854,7 @@
+ 
+ /*********************************************************/
+ 
+-#define NIC_INF_NAME    "wlan%d"	/* interface name */
++#define NIC_INF_NAME    "mtkwlan%d"	/* interface name */
+ #if CFG_TC1_FEATURE
+ #define NIC_INF_NAME_IN_AP_MODE  "legacy%d"
+ #endif
+@@ -1976,7 +1976,7 @@
+ 		if (u2QueueIdx < CFG_MAX_TXQ_NUM) {
+ 			if (prGlueInfo->ai4TxPendingFrameNumPerQueue[NETWORK_TYPE_AIS_INDEX][u2QueueIdx] >=
+ 			    CFG_TX_STOP_NETIF_PER_QUEUE_THRESHOLD) {
+-				DBGLOG(TX, INFO, "netif_stop_subqueue for wlan0, Queue len: %d\n",
++				DBGLOG(TX, INFO, "netif_stop_subqueue for mtkwlan0, Queue len: %d\n",
+ 					prGlueInfo->ai4TxPendingFrameNumPerQueue[NETWORK_TYPE_AIS_INDEX][u2QueueIdx]);
+ 
+ 				netif_stop_subqueue(prDev, u2QueueIdx);
+diff -ruN drivers.orig/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c	2020-03-24 21:51:49.389425758 +0800
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c	2020-03-24 21:59:53.915907978 +0800
+@@ -4174,8 +4174,8 @@
+ 		goto nla_put_failure;
+ 	if (unlikely(nla_put(skb, MTK_ATTR_AGPS_IFINDEX, sizeof(UINT_32), &prGlueInfo->prDevHandler->ifindex) < 0))
+ 		goto nla_put_failure;
+-	/* currently, the ifname maybe wlan0, p2p0, so the maximum name length will be 5 bytes */
+-	if (unlikely(nla_put(skb, MTK_ATTR_AGPS_IFNAME, 5, prGlueInfo->prDevHandler->name) < 0))
++	/* currently, the ifname maybe mtkwlan0, mtkp2p0, so the maximum name length will be 8 bytes */
++	if (unlikely(nla_put(skb, MTK_ATTR_AGPS_IFNAME, 8, prGlueInfo->prDevHandler->name) < 0))
+ 		goto nla_put_failure;
+ 	cfg80211_testmode_event(skb, GFP_KERNEL);
+ 	return TRUE;
+@@ -4368,13 +4368,13 @@
+ 		return -ENOENT;
+ 	}
+ 	/*
+-	 * Directory: Root (/proc/net/wlan0)
++	 * Directory: Root (/proc/net/mtkwlan0)
+ 	 */
+-	pMetProcDir = proc_mkdir("wlan0", init_net.proc_net);
++	pMetProcDir = proc_mkdir("mtkwlan0", init_net.proc_net);
+ 	if (pMetProcDir == NULL)
+ 		return -ENOENT;
+ 	/*
+-	   /proc/net/wlan0
++	   /proc/net/mtkwlan0
+ 	   |-- met_ctrl         (PROC_MET_PROF_CTRL)
+ 	   |-- met_port         (PROC_MET_PROF_PORT)
+ 	 */
+@@ -4396,8 +4396,8 @@
+ 	}
+ 	remove_proc_entry(PROC_MET_PROF_CTRL, pMetProcDir);
+ 	remove_proc_entry(PROC_MET_PROF_PORT, pMetProcDir);
+-	/* remove root directory (proc/net/wlan0) */
+-	remove_proc_entry("wlan0", init_net.proc_net);
++	/* remove root directory (proc/net/mtkwlan0) */
++	remove_proc_entry("mtkwlan0", init_net.proc_net);
+ 	/* clear MetGlobalData */
+ 	pMetGlobalData = NULL;
+ 
+diff -ruN drivers.orig/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p.c drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p.c
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p.c	2020-03-24 21:51:49.413425709 +0800
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p.c	2020-03-24 22:09:33.155189573 +0800
+@@ -1843,7 +1843,7 @@
+ 
+ 		if (prGlueInfo->ai4TxPendingFrameNumPerQueue[NETWORK_TYPE_P2P_INDEX][u2QueueIdx] >=
+ 		    CFG_TX_STOP_NETIF_PER_QUEUE_THRESHOLD) {
+-			DBGLOG(TX, INFO, "netif_stop_subqueue for p2p0, Queue len: %d\n",
++			DBGLOG(TX, INFO, "netif_stop_subqueue for mtkp2p0, Queue len: %d\n",
+ 				prGlueInfo->ai4TxPendingFrameNumPerQueue[NETWORK_TYPE_P2P_INDEX][u2QueueIdx]);
+ 			netif_stop_subqueue(prDev, u2QueueIdx);
+ 		}
+diff -ruN drivers.orig/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p_init.c drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p_init.c
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p_init.c	2020-03-24 21:51:49.413425709 +0800
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p_init.c	2020-03-24 22:05:25.999245286 +0800
+@@ -40,11 +40,11 @@
+ ********************************************************************************
+ */
+ 
+-#define P2P_MODE_INF_NAME "p2p%d"
++#define P2P_MODE_INF_NAME "mtkp2p%d"
+ #if CFG_TC1_FEATURE
+-#define AP_MODE_INF_NAME "wlan%d"
++#define AP_MODE_INF_NAME "mtkwlan%d"
+ #else
+-#define AP_MODE_INF_NAME "ap%d"
++#define AP_MODE_INF_NAME "mtkap%d"
+ #endif
+ /* #define MAX_INF_NAME_LEN 15 */
+ /* #define MIN_INF_NAME_LEN 1 */
+diff -ruN drivers.orig/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_proc.c drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_proc.c
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_proc.c	2020-03-24 21:51:49.549425438 +0800
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_proc.c	2020-03-24 22:01:38.845618395 +0800
+@@ -79,7 +79,7 @@
+ #define PROC_DBG_LEVEL_NAME						"dbgLevel"
+ #define PROC_NEED_TX_DONE						"TxDoneCfg"
+ #define PROC_AUTO_PER_CFG						"autoPerCfg"
+-#define PROC_ROOT_NAME			"wlan"
++#define PROC_ROOT_NAME			"mtkwlan"
+ #define PROC_CMD_DEBUG_NAME		"cmdDebug"
+ 
+ #define PROC_MCR_ACCESS_MAX_USER_INPUT_LEN      20
+diff -ruN drivers.orig/misc/mediatek/connectivity/wlan/gen2/os/linux/platform.c drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/platform.c
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/platform.c	2020-03-24 21:51:49.561425414 +0800
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/platform.c	2020-03-24 22:04:50.914524734 +0800
+@@ -177,7 +177,7 @@
+ 			ifa->ifa_address, notification, prDev->name);
+ 	if (!fgIsUnderSuspend)
+ 		return NOTIFY_DONE;
+-	if ((strncmp(prDev->name, "p2p", 3) != 0) && (strncmp(prDev->name, "wlan", 4) != 0)) {
++	if ((strncmp(prDev->name, "mtkp2p", 6) != 0) && (strncmp(prDev->name, "mtkwlan", 7) != 0)) {
+ 		DBGLOG(REQ, WARN, "netdev_event: not our device\n");
+ 		return NOTIFY_DONE;
+ 	}
+@@ -305,16 +305,16 @@
+ 		return NOTIFY_DONE;
+ 	}
+ 
+-	if ((strncmp(prDev->name, "p2p", 3) != 0) && (strncmp(prDev->name, "wlan", 4) != 0)) {
++	if ((strncmp(prDev->name, "mtkp2p", 6) != 0) && (strncmp(prDev->name, "mtkwlan", 7) != 0)) {
+ 		DBGLOG(REQ, INFO, "net6dev_event: xxx\n");
+ 		return NOTIFY_DONE;
+ 	}
+ 
+-	if (strncmp(prDev->name, "p2p", 3) == 0) {
++	if (strncmp(prDev->name, "mtkp2p", 6) == 0) {
+ 		/* because we store the address of prGlueInfo in p2p's private date of net device */
+ 		/* *((P_GLUE_INFO_T *) netdev_priv(prGlueInfo->prP2PInfo->prDevHandler)) = prGlueInfo; */
+ 		prGlueInfo = *((P_GLUE_INFO_T *) netdev_priv(prDev));
+-	} else {		/* wlan0 */
++	} else {		/* mtkwlan0 */
+ 		prGlueInfo = (P_GLUE_INFO_T) netdev_priv(prDev);
+ 	}
+ 

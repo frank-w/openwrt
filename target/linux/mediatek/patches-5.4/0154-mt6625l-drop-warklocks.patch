@@ -1,0 +1,404 @@
+From 922ecdd3bba1f97b4fc527956afb5b413787fecc Mon Sep 17 00:00:00 2001
+From: Alexey Loukianov <lx2@lexa2.ru>
+Date: Fri, 4 Oct 2019 10:14:05 +0200
+Subject: [PATCH] mt6625l: Drop usage of wakelocks Android API, use wake
+ sources instead.
+
+---
+ .../common/conn_soc/linux/include/osal.h      |  6 +-
+ .../conn_soc/linux/include/osal_typedef.h     |  4 --
+ .../common/conn_soc/linux/pub/osal.c          | 33 +++------
+ .../common/conn_soc/mt7623/wmt_plat_alps.c    | 48 +++----------
+ .../connectivity/wlan/gen2/os/linux/gl_kal.c  |  3 +-
+ .../wlan/gen2/os/linux/include/gl_kal.h       | 27 +++-----
+ .../wlan/gen2/os/linux/include/gl_os.h        |  9 ---
+ include/linux/pm_wakeup.h                     | 15 -----
+ include/linux/wakelock.h                      | 67 -------------------
+ 9 files changed, 29 insertions(+), 183 deletions(-)
+ delete mode 100644 include/linux/wakelock.h
+
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/include/osal.h b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/include/osal.h
+index cf3e830003ac..27ca75930bce 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/include/osal.h
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/include/osal.h
+@@ -192,11 +192,7 @@ typedef struct _OSAL_LXOP_Q {
+ } OSAL_OP_Q, *P_OSAL_OP_Q;
+ 
+ typedef struct _OSAL_WAKE_LOCK_ {
+-	#ifdef CONFIG_PM_WAKELOCKS
+-	struct wakeup_source wake_lock;
+-	#else
+-	struct wake_lock wake_lock;
+-	#endif
++	struct wakeup_source *wake_lock;
+ 	UINT8 name[MAX_WAKE_LOCK_NAME_LEN];
+ } OSAL_WAKE_LOCK, *P_OSAL_WAKE_LOCK;
+ #if 1
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/include/osal_typedef.h b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/include/osal_typedef.h
+index b3a9c57e062d..7b13e6b0a4ea 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/include/osal_typedef.h
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/include/osal_typedef.h
+@@ -57,11 +57,7 @@
+ #include <aee.h>
+ #endif
+ #include <linux/kfifo.h>
+-#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/pm_wakeup.h>
+-#else
+-#include <linux/wakelock.h>
+-#endif
+ #include <linux/log2.h>
+ 
+ #ifndef _TYPEDEFS_H		/*fix redifine */
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/osal.c b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/osal.c
+index 959b68de2431..ef65bbec796c 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/osal.c
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pub/osal.c
+@@ -985,11 +985,9 @@ INT32 osal_wake_lock_init(P_OSAL_WAKE_LOCK pLock)
+ 	if (!pLock)
+ 		return -1;
+ 
+-	#ifdef CONFIG_PM_WAKELOCKS
+-	wakeup_source_init(&pLock->wake_lock, pLock->name);
+-	#else
+-	wake_lock_init(&pLock->wake_lock, WAKE_LOCK_SUSPEND, pLock->name);
+-	#endif
++	if((pLock->wake_lock = wakeup_source_create(pLock->name)))
++		wakeup_source_add(pLock->wake_lock);
++
+ 	return 0;
+ }
+ 
+@@ -998,11 +996,8 @@ INT32 osal_wake_lock_deinit(P_OSAL_WAKE_LOCK pLock)
+ 	if (!pLock)
+ 		return -1;
+ 
+-	#ifdef CONFIG_PM_WAKELOCKS
+-	wakeup_source_trash(&pLock->wake_lock);
+-	#else
+-	wake_lock_destroy(&pLock->wake_lock);
+-	#endif
++	wakeup_source_remove(pLock->wake_lock);
++	wakeup_source_destroy(pLock->wake_lock);
+ 	return 0;
+ }
+ 
+@@ -1011,11 +1006,7 @@ INT32 osal_wake_lock(P_OSAL_WAKE_LOCK pLock)
+ 	if (!pLock)
+ 		return -1;
+ 
+-	#ifdef CONFIG_PM_WAKELOCKS
+-	__pm_stay_awake(&pLock->wake_lock);
+-	#else
+-	wake_lock(&pLock->wake_lock);
+-	#endif
++	__pm_stay_awake(pLock->wake_lock);
+ 
+ 	return 0;
+ }
+@@ -1025,11 +1016,7 @@ INT32 osal_wake_unlock(P_OSAL_WAKE_LOCK pLock)
+ 	if (!pLock)
+ 		return -1;
+ 
+-	#ifdef CONFIG_PM_WAKELOCKS
+-	__pm_relax(&pLock->wake_lock);
+-	#else
+-	wake_unlock(&pLock->wake_lock);
+-	#endif
++	__pm_relax(pLock->wake_lock);
+ 
+ 	return 0;
+ 
+@@ -1042,11 +1029,7 @@ INT32 osal_wake_lock_count(P_OSAL_WAKE_LOCK pLock)
+ 	if (!pLock)
+ 		return -1;
+ 
+-	#ifdef CONFIG_PM_WAKELOCKS
+-	count = pLock->wake_lock.active;
+-	#else
+-	count = wake_lock_active(&pLock->wake_lock);
+-	#endif
++	count = pLock->wake_lock->active;
+ 	return count;
+ }
+ 
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/wmt_plat_alps.c b/drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/wmt_plat_alps.c
+index 7163dc18a255..8f92846ab5dd 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/wmt_plat_alps.c
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/mt7623/wmt_plat_alps.c
+@@ -121,11 +121,7 @@ BT_WIFI_V33_STATUS gBtWifiV33;
+ */
+ #if CFG_WMT_WAKELOCK_SUPPORT
+ static struct mutex gOsSLock;
+-#ifdef CONFIG_PM_WAKELOCKS
+-static struct wakeup_source wmtWakeLock;
+-#else
+-static struct wake_lock wmtWakeLock;
+-#endif
++static struct wakeup_source *wmtWakeLock;
+ #endif
+ 
+ irq_cb wmt_plat_bgf_irq_cb = NULL;
+@@ -325,11 +321,8 @@ INT32 wmt_plat_init(UINT32 co_clock_type)
+ 	/* register to cmb_stub */
+ 	iret = mtk_wcn_cmb_stub_reg(&stub_cb);
+ #ifdef CFG_WMT_WAKELOCK_SUPPORT
+-#ifdef CONFIG_PM_WAKELOCKS
+-	wakeup_source_init(&wmtWakeLock, "wmtFuncCtrl");
+-#else
+-	wake_lock_init(&wmtWakeLock, WAKE_LOCK_SUSPEND, "wmtFuncCtrl");
+-#endif
++	if((wmtWakeLock = wakeup_source_create("wmtFuncCtrl")))
++		wakeup_source_add(wmtWakeLock);
+ 	mutex_init(&gOsSLock);
+ #endif
+ 
+@@ -355,16 +348,9 @@ INT32 wmt_plat_deinit(VOID)
+ printk(KERN_ALERT "DEBUG: Passed %s %d now calling wmt wakelock deinit\n",__FUNCTION__,__LINE__);
+ 	/*3. wmt wakelock deinit */
+ #ifdef CFG_WMT_WAKELOCK_SUPPORT
+-#ifdef CONFIG_PM_WAKELOCKS
+ printk(KERN_ALERT "DEBUG: Passed %s %d now calling wakeup_source_trash\n",__FUNCTION__,__LINE__);
+-	wakeup_source_trash(&wmtWakeLock);
+-#else
+-printk(KERN_ALERT "DEBUG: Passed %s %d now calling wake lock destroy %d\n",__FUNCTION__,__LINE__,(int)&wmtWakeLock);
+-//destroy calls wakeup_source_trash with &lock->ws
+-printk(KERN_ALERT "DEBUG: Passed %s %d now wmtWakeLock:%d\n",__FUNCTION__,__LINE__,(int)&wmtWakeLock);
+-printk(KERN_ALERT "DEBUG: Passed %s %d now wmtWakeLock->ws: %d\n",__FUNCTION__,__LINE__,(int)&(wmtWakeLock.ws));
+-	wake_lock_destroy(&wmtWakeLock);
+-#endif
++	wakeup_source_remove(wmtWakeLock);
++	wakeup_source_destroy(wmtWakeLock);
+ printk(KERN_ALERT "DEBUG: Passed %s %d now calling mutex_destroy\n",__FUNCTION__,__LINE__);
+ 	mutex_destroy(&gOsSLock);
+ 	WMT_PLAT_DBG_FUNC("destroy wmtWakeLock\n");
+@@ -834,30 +820,16 @@ INT32 wmt_plat_wake_lock_ctrl(ENUM_WL_OP opId)
+ 
+ 	mutex_unlock(&gOsSLock);
+ 	if (WL_OP_GET == opId && counter == 1) {
+-		#ifdef CONFIG_PM_WAKELOCKS
+-		__pm_stay_awake(&wmtWakeLock);
+-		status = wmtWakeLock.active;
+-		#else
+-		wake_lock(&wmtWakeLock);
+-		status = wake_lock_active(&wmtWakeLock);
+-		#endif
++		__pm_stay_awake(wmtWakeLock);
++		status = wmtWakeLock->active;
+ 		WMT_PLAT_DBG_FUNC("WMT-PLAT: after wake_lock(%d), counter(%d)\n", status, counter);
+ 
+ 	} else if (WL_OP_PUT == opId && counter == 0) {
+-		#ifdef CONFIG_PM_WAKELOCKS
+-		__pm_relax(&wmtWakeLock);
+-		status = wmtWakeLock.active;
+-		#else
+-		wake_unlock(&wmtWakeLock);
+-		status = wake_lock_active(&wmtWakeLock);
+-		#endif
++		__pm_relax(wmtWakeLock);
++		status = wmtWakeLock->active;
+ 		WMT_PLAT_DBG_FUNC("WMT-PLAT: after wake_unlock(%d), counter(%d)\n", status, counter);
+ 	} else {
+-		#ifdef CONFIG_PM_WAKELOCKS
+-		status = wmtWakeLock.active;
+-		#else
+-		status = wake_lock_active(&wmtWakeLock);
+-		#endif
++		status = wmtWakeLock->active;
+ 		WMT_PLAT_WARN_FUNC("WMT-PLAT: wakelock status(%d), counter(%d)\n", status, counter);
+ 	}
+ 	return 0;
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+index 3a257c9f85c4..351ee86610bd 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+@@ -778,7 +778,8 @@ typedef enum _ENUM_WMTHWVER_TYPE_T {
+ */
+ VOID kalHifAhbKalWakeLockTimeout(IN P_GLUE_INFO_T prGlueInfo)
+ {
+-	KAL_WAKE_LOCK_TIMEOUT(prGlueInfo->prAdapter, &(prGlueInfo->rAhbIsrWakeLock), (HZ / 10));	/* 100ms */
++	//KAL_WAKE_LOCK_TIMEOUT(prGlueInfo->prAdapter, &(prGlueInfo->rAhbIsrWakeLock), (HZ / 10));	/* 100ms */
++	printk(KERN_CRIT "kalHifAhbKalWakeLockTimeout: prGlueInfo->rAhbIsrWakeLock = %px\n", prGlueInfo->rAhbIsrWakeLock);
+ }
+ 
+ #if CFG_ENABLE_FW_DOWNLOAD
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_kal.h b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_kal.h
+index b1386918c08d..4804c943e149 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_kal.h
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_kal.h
+@@ -643,11 +643,7 @@ typedef enum _ENUM_KAL_MEM_ALLOCATION_TYPE_E {
+ 	MEM_TYPE_NUM
+ } ENUM_KAL_MEM_ALLOCATION_TYPE;
+ 
+-#if CONFIG_ANDROID		/* Defined in Android kernel source */
+-typedef struct wake_lock KAL_WAKE_LOCK_T, *P_KAL_WAKE_LOCK_T;
+-#else
+-typedef UINT_32 KAL_WAKE_LOCK_T, *P_KAL_WAKE_LOCK_T;
+-#endif
++typedef struct wakeup_source *KAL_WAKE_LOCK_T, **P_KAL_WAKE_LOCK_T;
+ 
+ #if CFG_SUPPORT_AGPS_ASSIST
+ typedef enum _ENUM_MTK_AGPS_ATTR {
+@@ -723,29 +719,22 @@ struct KAL_HALT_CTRL_T {
+ /*----------------------------------------------------------------------------*/
+ /* Macros of wake_lock operations for using in Driver Layer                   */
+ /*----------------------------------------------------------------------------*/
+-#if CONFIG_ANDROID		/* Defined in Android kernel source */
+ #define KAL_WAKE_LOCK_INIT(_prAdapter, _prWakeLock, _pcName) \
+-	wake_lock_init(_prWakeLock, WAKE_LOCK_SUSPEND, _pcName)
++	if( (*(_prWakeLock) = wakeup_source_create(_pcName)) ) \
++		wakeup_source_add(*(_prWakeLock))
+ 
+ #define KAL_WAKE_LOCK_DESTROY(_prAdapter, _prWakeLock) \
+-	wake_lock_destroy(_prWakeLock)
++	{ wakeup_source_remove(*(_prWakeLock)); \
++	wakeup_source_destroy(*(_prWakeLock));}
+ 
+ #define KAL_WAKE_LOCK(_prAdapter, _prWakeLock) \
+-	wake_lock(_prWakeLock)
++	__pm_stay_awake(*(_prWakeLock))
+ 
+ #define KAL_WAKE_LOCK_TIMEOUT(_prAdapter, _prWakeLock, _u4Timeout) \
+-	wake_lock_timeout(_prWakeLock, _u4Timeout)
++	__pm_wakeup_event(*(_prWakeLock), jiffies_to_msecs(_u4Timeout))
+ 
+ #define KAL_WAKE_UNLOCK(_prAdapter, _prWakeLock) \
+-	wake_unlock(_prWakeLock)
+-
+-#else
+-#define KAL_WAKE_LOCK_INIT(_prAdapter, _prWakeLock, _pcName)
+-#define KAL_WAKE_LOCK_DESTROY(_prAdapter, _prWakeLock)
+-#define KAL_WAKE_LOCK(_prAdapter, _prWakeLock)
+-#define KAL_WAKE_LOCK_TIMEOUT(_prAdapter, _prWakeLock, _u4Timeout)
+-#define KAL_WAKE_UNLOCK(_prAdapter, _prWakeLock)
+-#endif
++	__pm_relax(*(_prWakeLock))
+ 
+ /*----------------------------------------------------------------------------*/
+ /*!
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_os.h b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_os.h
+index a4321e7f9a11..1b25e1d562b7 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_os.h
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_os.h
+@@ -517,11 +517,6 @@
+ 
+ #define DRV_NAME "["CHIP_NAME"]: "
+ 
+-#define CONFIG_ANDROID 1
+-/* Define if target platform is Android.
+- * It should already be defined in Android kernel source
+- */
+-
+ /* for CFG80211 IE buffering mechanism */
+ #define CFG_CFG80211_IE_BUF_LEN     (512)
+ 
+@@ -537,10 +532,6 @@
+ #include <linux/jiffies.h>	/* jiffies */
+ #include <linux/delay.h>	/* udelay and mdelay macro */
+ 
+-#if CONFIG_ANDROID
+-#include <linux/wakelock.h>
+-#endif
+-
+ #include <linux/irq.h>		/* IRQT_FALLING */
+ 
+ #include <linux/netdevice.h>	/* struct net_device, struct net_device_stats */
+diff --git a/include/linux/pm_wakeup.h b/include/linux/pm_wakeup.h
+index 2e7088965c7b..661efa029c96 100644
+--- a/include/linux/pm_wakeup.h
++++ b/include/linux/pm_wakeup.h
+@@ -183,21 +183,6 @@ static inline void pm_wakeup_dev_event(struct device *dev, unsigned int msec,
+ 
+ #endif /* !CONFIG_PM_SLEEP */
+ 
+-static inline void wakeup_source_init(struct wakeup_source *ws,
+-				      const char *name)
+-{
+-	wakeup_source_prepare(ws, name);
+-	wakeup_source_add(ws);
+-}
+-
+-static inline void wakeup_source_trash(struct wakeup_source *ws)
+-{
+-	wakeup_source_remove(ws);
+-	//wakeup_source_drop(ws);
+-	if (ws)
+-		__pm_relax(ws);
+-}
+-
+ static inline void __pm_wakeup_event(struct wakeup_source *ws, unsigned int msec)
+ {
+ 	return pm_wakeup_ws_event(ws, msec, false);
+diff --git a/include/linux/wakelock.h b/include/linux/wakelock.h
+deleted file mode 100644
+index f4a698a22880..000000000000
+--- a/include/linux/wakelock.h
++++ /dev/null
+@@ -1,67 +0,0 @@
+-/* include/linux/wakelock.h
+- *
+- * Copyright (C) 2007-2012 Google, Inc.
+- *
+- * This software is licensed under the terms of the GNU General Public
+- * License version 2, as published by the Free Software Foundation, and
+- * may be copied, distributed, and modified under those terms.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- */
+-
+-#ifndef _LINUX_WAKELOCK_H
+-#define _LINUX_WAKELOCK_H
+-
+-#include <linux/ktime.h>
+-#include <linux/device.h>
+-
+-/* A wake_lock prevents the system from entering suspend or other low power
+- * states when active. If the type is set to WAKE_LOCK_SUSPEND, the wake_lock
+- * prevents a full system suspend.
+- */
+-
+-enum {
+-	WAKE_LOCK_SUSPEND, /* Prevent suspend */
+-	WAKE_LOCK_TYPE_COUNT
+-};
+-
+-struct wake_lock {
+-	struct wakeup_source ws;
+-};
+-
+-static inline void wake_lock_init(struct wake_lock *lock, int type,
+-				  const char *name)
+-{
+-	wakeup_source_init(&lock->ws, name);
+-}
+-
+-static inline void wake_lock_destroy(struct wake_lock *lock)
+-{
+-	wakeup_source_trash(&lock->ws);
+-}
+-
+-static inline void wake_lock(struct wake_lock *lock)
+-{
+-	__pm_stay_awake(&lock->ws);
+-}
+-
+-static inline void wake_lock_timeout(struct wake_lock *lock, long timeout)
+-{
+-	__pm_wakeup_event(&lock->ws, jiffies_to_msecs(timeout));
+-}
+-
+-static inline void wake_unlock(struct wake_lock *lock)
+-{
+-	__pm_relax(&lock->ws);
+-}
+-
+-static inline int wake_lock_active(struct wake_lock *lock)
+-{
+-	return lock->ws.active;
+-}
+-
+-#endif

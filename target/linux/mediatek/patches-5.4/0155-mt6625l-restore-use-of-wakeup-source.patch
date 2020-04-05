@@ -1,0 +1,50 @@
+From dd464e82fe5c3cea838e26bd5e74659c818c710a Mon Sep 17 00:00:00 2001
+From: Alexey Loukianov <lx2@lexa2.ru>
+Date: Sat, 19 Oct 2019 05:35:56 +0300
+Subject: [PATCH] mt6625l: restore use of wakeup source in irq handler
+
+Signed-off-by: Alexey Loukianov <lx2@lexa2.ru>
+---
+ .../connectivity/wlan/gen2/os/linux/gl_kal.c         |  3 +--
+ .../connectivity/wlan/gen2/os/linux/include/gl_kal.h | 12 ++++++++----
+ 2 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+index 351ee86610bd..3a257c9f85c4 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+@@ -778,8 +778,7 @@ typedef enum _ENUM_WMTHWVER_TYPE_T {
+ */
+ VOID kalHifAhbKalWakeLockTimeout(IN P_GLUE_INFO_T prGlueInfo)
+ {
+-	//KAL_WAKE_LOCK_TIMEOUT(prGlueInfo->prAdapter, &(prGlueInfo->rAhbIsrWakeLock), (HZ / 10));	/* 100ms */
+-	printk(KERN_CRIT "kalHifAhbKalWakeLockTimeout: prGlueInfo->rAhbIsrWakeLock = %px\n", prGlueInfo->rAhbIsrWakeLock);
++	KAL_WAKE_LOCK_TIMEOUT(prGlueInfo->prAdapter, &(prGlueInfo->rAhbIsrWakeLock), (HZ / 10));	/* 100ms */
+ }
+ 
+ #if CFG_ENABLE_FW_DOWNLOAD
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_kal.h b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_kal.h
+index 4804c943e149..2cf7c7a4acee 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_kal.h
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/include/gl_kal.h
+@@ -720,12 +720,16 @@ struct KAL_HALT_CTRL_T {
+ /* Macros of wake_lock operations for using in Driver Layer                   */
+ /*----------------------------------------------------------------------------*/
+ #define KAL_WAKE_LOCK_INIT(_prAdapter, _prWakeLock, _pcName) \
+-	if( (*(_prWakeLock) = wakeup_source_create(_pcName)) ) \
+-		wakeup_source_add(*(_prWakeLock))
++	do { \
++		if( (*(_prWakeLock) = wakeup_source_create(_pcName)) ) \
++			wakeup_source_add(*(_prWakeLock)); \
++	} while (0)
+ 
+ #define KAL_WAKE_LOCK_DESTROY(_prAdapter, _prWakeLock) \
+-	{ wakeup_source_remove(*(_prWakeLock)); \
+-	wakeup_source_destroy(*(_prWakeLock));}
++	do { \
++		wakeup_source_remove(*(_prWakeLock)); \
++		wakeup_source_destroy(*(_prWakeLock)); \
++	} while (0)
+ 
+ #define KAL_WAKE_LOCK(_prAdapter, _prWakeLock) \
+ 	__pm_stay_awake(*(_prWakeLock))

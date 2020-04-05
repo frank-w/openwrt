@@ -1,0 +1,64 @@
+From 0598d3efaf95838842b36c70fb78e5c5835a8222 Mon Sep 17 00:00:00 2001
+From: Alexey Loukianov <lx2@lexa2.ru>
+Date: Sat, 19 Oct 2019 03:23:58 +0300
+Subject: [PATCH] mt6625l: use proper decorations for module init/exit
+
+Signed-off-by: Alexey Loukianov <lx2@lexa2.ru>
+---
+ .../mediatek/connectivity/common/common_detect/wmt_detect.c | 4 ++--
+ .../mediatek/connectivity/wlan/gen2/os/linux/hif/ahb/ahb.c  | 6 +++---
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/wmt_detect.c b/drivers/misc/mediatek/connectivity/common/common_detect/wmt_detect.c
+index 487852df8f20..bd3fb6b0bb62 100644
+--- a/drivers/misc/mediatek/connectivity/common/common_detect/wmt_detect.c
++++ b/drivers/misc/mediatek/connectivity/common/common_detect/wmt_detect.c
+@@ -274,7 +274,7 @@ static struct platform_driver wmt_detect_driver = {
+ #endif
+ 
+ /*module_platform_driver(wmt_detect_driver);*/
+-static int wmt_detect_driver_init(void)
++static int __init wmt_detect_driver_init(void)
+ {
+ 	dev_t devID = MKDEV(gWmtDetectMajor, 0);
+ 	int cdevErr = -1;
+@@ -342,7 +342,7 @@ static int wmt_detect_driver_init(void)
+ 	return -1;
+ }
+ 
+-static void wmt_detect_driver_exit(void)
++static void __exit wmt_detect_driver_exit(void)
+ {
+ 	dev_t dev = MKDEV(gWmtDetectMajor, 0);
+ 
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/hif/ahb/ahb.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/hif/ahb/ahb.c
+index c13d24906bf8..aee35170d613 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/hif/ahb/ahb.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/hif/ahb/ahb.c
+@@ -308,7 +308,7 @@ static const struct of_device_id apwifi_of_ids[] = {
+ };
+ #endif
+ 
+-struct platform_driver MtkPltmAhbDriver = {
++struct platform_driver MtkPltmAhb_driver = {
+ 	.driver = {
+ 	.name = "mt-wifi",
+ 	.owner = THIS_MODULE,
+@@ -362,7 +362,7 @@ WLAN_STATUS glRegisterBus(probe_card pfProbe, remove_card pfRemove)
+ 		return Ret;
+ 	HifAhbProbe();
+ #else
+-	Ret = platform_driver_register(&MtkPltmAhbDriver);
++	Ret = platform_driver_register(&MtkPltmAhb_driver);
+ #endif /* CONF_HIF_DEV_MISC */
+ 
+ 	return Ret;
+@@ -391,7 +391,7 @@ VOID glUnregisterBus(remove_card pfRemove)
+ 		;
+ #else
+ 
+-	platform_driver_unregister(&MtkPltmAhbDriver);
++	platform_driver_unregister(&MtkPltmAhb_driver);
+ #endif /* CONF_HIF_DEV_MISC */
+ 
+ 	return;

@@ -1,0 +1,118 @@
+From f35ad18d31f96486ca32527a199bcf4e627a3a26 Mon Sep 17 00:00:00 2001
+From: Frank Wunderlich <frank-w@public-files.de>
+Date: Fri, 4 Oct 2019 10:53:34 +0200
+Subject: [PATCH] mt6625l: mark implicit fallthrough as wanted to fix build
+
+---
+ .../misc/mediatek/connectivity/wlan/gen2/common/wlan_lib.c  | 1 +
+ .../misc/mediatek/connectivity/wlan/gen2/common/wlan_oid.c  | 2 ++
+ .../misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_func.c    | 1 +
+ drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/scan.c    | 6 ++++--
+ drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/stats.c   | 1 +
+ .../connectivity/wlan/gen2/os/linux/gl_p2p_cfg80211.c       | 2 ++
+ 6 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/common/wlan_lib.c b/drivers/misc/mediatek/connectivity/wlan/gen2/common/wlan_lib.c
+index 1c59f861047e..14396606d353 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/common/wlan_lib.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/common/wlan_lib.c
+@@ -5835,6 +5835,7 @@ INT_32 wlanCfgFindNextToken(struct WLAN_CFG_PARSE_STATE_S *state)
+ 					x++;
+ 					continue;
+ 				}
++				/* FALLTHRU */
+ 			case '\n':
+ 				/* \ <lf> -> line continuation */
+ 				x++;
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/common/wlan_oid.c b/drivers/misc/mediatek/connectivity/wlan/gen2/common/wlan_oid.c
+index 993ff061ed20..ab39a3929f21 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/common/wlan_oid.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/common/wlan_oid.c
+@@ -6555,9 +6555,11 @@ wlanoidSetAcpiDevicePowerState(IN P_ADAPTER_T prAdapter,
+ 	case ParamDeviceStateD1:
+ 		DBGLOG(OID, INFO, "Set Power State: D1\n");
+ 		/* no break here */
++		/* FALLTHRU */
+ 	case ParamDeviceStateD2:
+ 		DBGLOG(OID, INFO, "Set Power State: D2\n");
+ 		/* no break here */
++		/* FALLTHRU */
+ 	case ParamDeviceStateD3:
+ 		DBGLOG(OID, INFO, "Set Power State: D3\n");
+ 		fgRetValue = nicpmSetAcpiPowerD3(prAdapter);
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_func.c b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_func.c
+index 586a74721b3b..be2150452f7a 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_func.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_func.c
+@@ -268,6 +268,7 @@ p2pFuncSwitchOPMode(IN P_ADAPTER_T prAdapter,
+ 			switch (eOpMode) {
+ 			case OP_MODE_INFRASTRUCTURE:
+ 				DBGLOG(P2P, TRACE, "p2pFuncSwitchOPMode: Switch to Client.\n");
++				/* FALLTHRU */
+ 			case OP_MODE_ACCESS_POINT:
+ /* if (!IS_BSS_ACTIVE(prP2pBssInfo)) { */
+ /* SET_NET_ACTIVE(prAdapter, NETWORK_TYPE_P2P_INDEX); */
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/scan.c b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/scan.c
+index 2c9ccbe82dd1..142b839a3db7 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/scan.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/scan.c
+@@ -1036,7 +1036,9 @@ scanSearchExistingBssDescWithSsid(IN P_ADAPTER_T prAdapter,
+ 	switch (eBSSType) {
+ 	case BSS_TYPE_P2P_DEVICE:
+ 		fgCheckSsid = FALSE;
++		/* FALLTHRU */
+ 	case BSS_TYPE_INFRASTRUCTURE:
++		/* FALLTHRU */
+ 	case BSS_TYPE_BOW_DEVICE:
+ 		{
+ 			prBssDesc = scanSearchBssDescByBssidAndSsid(prAdapter, aucBSSID, fgCheckSsid, prSsid);
+@@ -1045,7 +1047,7 @@ scanSearchExistingBssDescWithSsid(IN P_ADAPTER_T prAdapter,
+ 
+ 			return prBssDesc;
+ 		}
+-
++		/* FALLTHRU */
+ 	case BSS_TYPE_IBSS:
+ 		{
+ 			prIBSSBssDesc = scanSearchBssDescByBssidAndSsid(prAdapter, aucBSSID, fgCheckSsid, prSsid);
+@@ -1093,7 +1095,7 @@ scanSearchExistingBssDescWithSsid(IN P_ADAPTER_T prAdapter,
+ 			/* CASE V */
+ 			break;	/* Return NULL; */
+ 		}
+-
++		/* FALLTHRU */
+ 	default:
+ 		break;
+ 	}
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/stats.c b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/stats.c
+index ab3fcc028375..d15111c3bbe7 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/stats.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/stats.c
+@@ -1172,6 +1172,7 @@ static VOID statsParsePktInfo(PUINT_8 pucPkt, UINT_8 status, UINT_8 eventType, P
+ 	}
+ 	case ETH_P_PRE_1X:
+ 		DBGLOG(RX, INFO, "pre-1x\n");
++		/* FALLTHRU */
+ 	case ETH_P_1X:
+ 	{
+ 		PUINT_8 pucEapol = pucEthBody;
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p_cfg80211.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p_cfg80211.c
+index 4d71e0c59b05..212ec4f98f76 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p_cfg80211.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_p2p_cfg80211.c
+@@ -1288,6 +1288,7 @@ mtk_p2p_cfg80211_change_iface(IN struct wiphy *wiphy,
+ 		switch (type) {
+ 		case NL80211_IFTYPE_P2P_CLIENT:
+ 			DBGLOG(P2P, TRACE, "NL80211_IFTYPE_P2P_CLIENT.\n");
++			/* FALLTHRU */
+ 		case NL80211_IFTYPE_STATION:
+ 			if (type == NL80211_IFTYPE_STATION)
+ 				DBGLOG(P2P, TRACE, "NL80211_IFTYPE_STATION.\n");
+@@ -1295,6 +1296,7 @@ mtk_p2p_cfg80211_change_iface(IN struct wiphy *wiphy,
+ 			break;
+ 		case NL80211_IFTYPE_AP:
+ 			DBGLOG(P2P, TRACE, "NL80211_IFTYPE_AP.\n");
++			/* FALLTHRU */
+ 		case NL80211_IFTYPE_P2P_GO:
+ 			if (type == NL80211_IFTYPE_P2P_GO)
+ 				DBGLOG(P2P, TRACE, "NL80211_IFTYPE_P2P_GO not AP.\n");

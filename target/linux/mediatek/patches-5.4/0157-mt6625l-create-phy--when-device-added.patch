@@ -1,0 +1,74 @@
+From db89baf28a66097d905d12a6b6889f2f2f522a2e Mon Sep 17 00:00:00 2001
+From: Alexey Loukianov <lx2@lexa2.ru>
+Date: Sat, 19 Oct 2019 04:19:39 +0300
+Subject: [PATCH] mt6625l: create phy only when device is added
+
+Original-Author: Nikolay Amiantov <ab@fmap.me>
+Signed-off-by: Alexey Loukianov <lx2@lexa2.ru>
+---
+ .../connectivity/wlan/gen2/os/linux/gl_init.c      | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c
+index e38e1ddf2bb7..eb64c69d9207 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_init.c
+@@ -1697,6 +1697,7 @@ static void createWirelessDevice(void)
+ 	}
+ #endif /* CFG_SUPPORT_PERSIST_NETDEV */
+ 	gprWdev = prWdev;
++	glP2pCreateWirelessDevice((P_GLUE_INFO_T) wiphy_priv(prWiphy));
+ 	DBGLOG(INIT, INFO, "create wireless device success\n");
+ 	return;
+ 
+@@ -1719,6 +1720,7 @@ static void destroyWirelessDevice(void)
+ 	wiphy_unregister(gprWdev->wiphy);
+ 	wiphy_free(gprWdev->wiphy);
+ 	kfree(gprWdev);
++	glP2pDestroyWirelessDevice();
+ 	gprWdev = NULL;
+ }
+ 
+@@ -2328,10 +2330,13 @@ static struct lock_class_key rSpinKey[SPIN_LOCK_NUM];
+ static struct wireless_dev *wlanNetCreate(PVOID pvData)
+ {
+ 	P_GLUE_INFO_T prGlueInfo = NULL;
+-	struct wireless_dev *prWdev = gprWdev;
++	struct wireless_dev *prWdev = NULL;
+ 	UINT_32 i;
+ 	struct device *prDev;
+ 
++	createWirelessDevice();
++	prWdev = gprWdev;
++
+ 	if (!prWdev) {
+ 		DBGLOG(INIT, ERROR, "Allocating memory to wireless_dev context failed\n");
+ 		return NULL;
+@@ -3401,6 +3406,8 @@ static VOID wlanRemove(VOID)
+ 	DBGLOG(INIT, LOUD, "wlanUnregisterNotifier...\n");
+ 	wlanUnregisterNotifier();
+ 
++	destroyWirelessDevice();
++
+ 	DBGLOG(INIT, INFO, "wlanRemove ok\n");
+ }				/* end of wlanRemove() */
+ 
+@@ -3432,9 +3439,6 @@ static int initWlan(void)
+ 	/* memory pre-allocation */
+ 	kalInitIOBuffer();
+ 	procInitFs();
+-	createWirelessDevice();
+-	if (gprWdev)
+-		glP2pCreateWirelessDevice((P_GLUE_INFO_T) wiphy_priv(gprWdev->wiphy));
+ 
+ 	ret = ((glRegisterBus(wlanProbe, wlanRemove) == WLAN_STATUS_SUCCESS) ? 0 : -EIO);
+ 
+@@ -3473,8 +3477,6 @@ static VOID exitWlan(void)
+ #if CFG_CHIP_RESET_SUPPORT
+ 	glResetUninit();
+ #endif
+-	destroyWirelessDevice();
+-	glP2pDestroyWirelessDevice();
+ 
+ 	glUnregisterBus(wlanRemove);
+ 

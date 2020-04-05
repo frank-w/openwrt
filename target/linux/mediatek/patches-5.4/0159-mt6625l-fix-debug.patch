@@ -1,0 +1,240 @@
+From 75431d90f2d2753bcb0ef33c952418c50b229aa4 Mon Sep 17 00:00:00 2001
+From: Alexey Loukianov <lx2@lexa2.ru>
+Date: Sat, 19 Oct 2019 03:59:17 +0300
+Subject: [PATCH] mt6625l: fix/impove driver debugging features
+
+Signed-off-by: Alexey Loukianov <lx2@lexa2.ru>
+---
+ .../common_detect/drv_init/wlan_drv_init.c    |  2 --
+ .../common/conn_soc/linux/pri/wmt_exp.c       |  2 ++
+ .../mediatek/connectivity/wlan/gen2/Makefile  |  6 ++++
+ .../connectivity/wlan/gen2/include/debug.h    | 32 +++++++++++++++----
+ .../connectivity/wlan/gen2/include/wlan_oid.h |  4 +--
+ .../connectivity/wlan/gen2/mgmt/p2p_fsm.c     |  6 ++--
+ .../connectivity/wlan/gen2/mgmt/sec_fsm.c     |  2 +-
+ .../connectivity/wlan/gen2/os/linux/gl_kal.c  |  2 +-
+ 8 files changed, 41 insertions(+), 15 deletions(-)
+
+diff --git a/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/wlan_drv_init.c b/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/wlan_drv_init.c
+index 664544b91106..6d7c5751cade 100644
+--- a/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/wlan_drv_init.c
++++ b/drivers/misc/mediatek/connectivity/common/common_detect/drv_init/wlan_drv_init.c
+@@ -68,9 +68,7 @@ int do_wlan_drv_init(int chip_id)
+ 	WMT_DETECT_INFO_FUNC("finish wlan module init\n");
+ 
+ #else
+-
+ 	WMT_DETECT_INFO_FUNC("CONFIG_MTK_COMBO_WIFI is not defined\n");
+-
+ #endif
+ 
+ 	return i_ret;
+diff --git a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pri/wmt_exp.c b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pri/wmt_exp.c
+index 8d5c23732c1c..d38dc3fe6e34 100644
+--- a/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pri/wmt_exp.c
++++ b/drivers/misc/mediatek/connectivity/common/conn_soc/linux/pri/wmt_exp.c
+@@ -509,11 +509,13 @@ VOID mtk_wcn_wmt_exp_init(void)
+ 		.wmt_assert_cb = _mtk_wcn_wmt_assert
+ 	};
+ 
++	WMT_DBG_FUNC("call mtk_wcn_wmt_exp_cb_reg() to set callbacks\n");
+ 	mtk_wcn_wmt_exp_cb_reg(&wmtExpCb);
+ }
+ 
+ VOID mtk_wcn_wmt_exp_deinit(void)
+ {
++	WMT_DBG_FUNC("calling mtk_wcn_wmt_exp_cb_unreg() to clear callbacks\n");
+ 	mtk_wcn_wmt_exp_cb_unreg();
+ }
+ #ifdef CONFIG_MTK_COMBO_ANT
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/Makefile b/drivers/misc/mediatek/connectivity/wlan/gen2/Makefile
+index b86ab49fce3a..4e56b0b7f911 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/Makefile
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/Makefile
+@@ -95,7 +95,13 @@ endif
+ 
+ ccflags-y += -D_HIF_SDIO=1
+ 
++# ----------------------------------------------------
++# Debug control: uncomment/comment to enable/disable
++# ----------------------------------------------------
+ ccflags-y += -DDBG=0
++#ccflags-y += -DDBG=1
++# ----------------------------------------------------
++
+ ccflags-y += -I$(src)/os -I$(src)/os/linux/include -I$(src)/os/linux/hif/ahb/include
+ ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/include/debug.h b/drivers/misc/mediatek/connectivity/wlan/gen2/include/debug.h
+index af586063c21a..77ed3c0ffd22 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/include/debug.h
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/include/debug.h
+@@ -276,13 +276,15 @@ typedef enum _ENUM_DBG_MODULE_T {
+ extern PINT_16 g_wbuf_p;
+ extern PINT_8 g_buf_p;
+ 
+-    /* If __FUNCTION__ is already defined by compiler, we just use it. */
+-#if defined(__func__)
+ #define DEBUGFUNC(_Func)
+-#else
+-#define DEBUGFUNC(_Func) \
+-	static const char __func__[] = _Func
+-#endif
++
++#define WARNLOG(_Fmt) \
++{ \
++    if (aucDebugModule[DBG_INIT_IDX] & DBG_CLASS_WARN) { \
++        LOG_FUNC("**Warning[%s:%d]-", __FILE__, __LINE__); \
++        LOG_FUNC _Fmt; \
++    } \
++}
+ 
+ #define DBGLOG_MEM8(_Module, _Class, _StartAddr, _Length) \
+ 	{ \
+@@ -315,20 +317,26 @@ extern PINT_8 g_buf_p;
+ #else
+ #define ASSERT(_exp) \
+ 	{ \
++		_Pragma("GCC diagnostic push") \
++		_Pragma("GCC diagnostic ignored \"-Waddress\"") \
+ 	    if (!(_exp) && !fgIsBusAccessFailed) { \
+ 		LOG_FUNC("Assertion failed: %s:%d %s\n", __FILE__, __LINE__, #_exp); \
+ 		kalBreakPoint(); \
+ 	    } \
++	    _Pragma("GCC diagnostic pop") \
+ 	}
+ #endif /* _lint */
+ 
+ #define ASSERT_REPORT(_exp, _fmt) \
+ 	{ \
++		_Pragma("GCC diagnostic push") \
++		_Pragma("GCC diagnostic ignored \"-Waddress\"") \
+ 	    if (!(_exp) && !fgIsBusAccessFailed) { \
+ 		LOG_FUNC("Assertion failed: %s:%d %s\n", __FILE__, __LINE__, #_exp); \
+ 		LOG_FUNC _fmt; \
+ 		kalBreakPoint(); \
+ 	    } \
++	    _Pragma("GCC diagnostic pop") \
+ 	}
+ 
+ #define DISP_STRING(_str)       _str
+@@ -349,19 +357,25 @@ extern PINT_8 g_buf_p;
+ #if defined(LINUX)		/* For debugging in Linux w/o GDB */
+ #define ASSERT(_exp) \
+ 	{ \
++		_Pragma("GCC diagnostic push") \
++		_Pragma("GCC diagnostic ignored \"-Waddress\"") \
+ 		if (!(_exp) && !fgIsBusAccessFailed) { \
+ 			LOG_FUNC("Assertion failed: %s:%d (%s)\n", __FILE__, __LINE__, #_exp); \
+ 			kalBreakPoint(); \
+ 		} \
++	    _Pragma("GCC diagnostic pop") \
+ 	}
+ 
+ #define ASSERT_REPORT(_exp, _fmt) \
+ 	{ \
++		_Pragma("GCC diagnostic push") \
++		_Pragma("GCC diagnostic ignored \"-Waddress\"") \
+ 		if (!(_exp) && !fgIsBusAccessFailed) { \
+ 			LOG_FUNC("Assertion failed: %s:%d (%s)\n", __FILE__, __LINE__, #_exp); \
+ 			LOG_FUNC _fmt; \
+ 			kalBreakPoint(); \
+ 		} \
++		_Pragma("GCC diagnostic pop") \
+ 	}
+ #else
+ #ifdef WINDOWS_CE
+@@ -410,17 +424,23 @@ extern PINT_8 g_buf_p;
+ #else
+ #define ASSERT(_exp) \
+ 	{ \
++	    _Pragma("GCC diagnostic push") \
++	    _Pragma("GCC diagnostic ignored \"-Waddress\"") \
+ 	    if (!(_exp) && !fgIsBusAccessFailed) { \
+ 		LOG_FUNC("Warning at %s:%d (%s)\n", __func__, __LINE__, #_exp); \
+ 	    } \
++	    _Pragma("GCC diagnostic pop") \
+ 	}
+ 
+ #define ASSERT_REPORT(_exp, _fmt) \
+ 	{ \
++	    _Pragma("GCC diagnostic push") \
++	    _Pragma("GCC diagnostic ignored \"-Waddress\"") \
+ 	    if (!(_exp) && !fgIsBusAccessFailed) { \
+ 		LOG_FUNC("Warning at %s:%d (%s)\n", __func__, __LINE__, #_exp); \
+ 		LOG_FUNC _fmt; \
+ 	    } \
++	    _Pragma("GCC diagnostic pop") \
+ 	}
+ #endif /* BUILD_QA_DBG */
+ 
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/include/wlan_oid.h b/drivers/misc/mediatek/connectivity/wlan/gen2/include/wlan_oid.h
+index 45919df996e9..3c01e0e53b70 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/include/wlan_oid.h
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/include/wlan_oid.h
+@@ -221,9 +221,9 @@
+ ********************************************************************************
+ */
+ #if DBG
+-extern UINT_8 aucDebugModule[DBG_MODULE_NUM];
++extern UINT_8 aucDebugModule[];
+ extern UINT_32 u4DebugModule;
+-UINT_32 u4DebugModuleTemp;
++/* UINT_32 u4DebugModuleTemp; */
+ #endif /* DBG */
+ extern int sprintf(char *buf, const char *fmt, ...);
+ 
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_fsm.c b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_fsm.c
+index f8c09e2aa9de..409c18589285 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_fsm.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/p2p_fsm.c
+@@ -2301,7 +2301,7 @@ VOID p2pFsmRunEventJoinComplete(IN P_ADAPTER_T prAdapter, IN P_MSG_HDR_T prMsgHd
+ 	P_SW_RFB_T prAssocRspSwRfb = (P_SW_RFB_T) NULL;
+ 	P_BSS_INFO_T prP2pBssInfo = (P_BSS_INFO_T) NULL;
+ 
+-	ASSERT_BREAK((prAdapter != NULL) && (prMsgHdr != NULL));
++	ASSERT((prAdapter != NULL) && (prMsgHdr != NULL));
+ 	DBGLOG(P2P, TRACE, "P2P Join Complete\n");
+ 
+ 	prP2pFsmInfo = prAdapter->rWifiVar.prP2pFsmInfo;
+@@ -2759,12 +2759,12 @@ VOID p2pFsmRunEventExtendListen(IN P_ADAPTER_T prAdapter, IN P_MSG_HDR_T prMsgHd
+ 	P_P2P_FSM_INFO_T prP2pFsmInfo = NULL;
+ 	struct _MSG_P2P_EXTEND_LISTEN_INTERVAL_T *prExtListenMsg = NULL;
+ 
+-	ASSERT_BREAK((prAdapter != NULL) && (prMsgHdr != NULL));
++	ASSERT((prAdapter != NULL) && (prMsgHdr != NULL));
+ 
+ 	prExtListenMsg = (struct _MSG_P2P_EXTEND_LISTEN_INTERVAL_T *) prMsgHdr;
+ 
+ 	prP2pFsmInfo = prAdapter->rWifiVar.prP2pFsmInfo;
+-	ASSERT_BREAK(prP2pFsmInfo);
++	ASSERT(prP2pFsmInfo);
+ 
+ 	if (!prExtListenMsg->wait) {
+ 		DBGLOG(P2P, INFO, "reset listen interval\n");
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/sec_fsm.c b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/sec_fsm.c
+index 29eb8d4e7d92..3b51e0dbffa9 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/sec_fsm.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/mgmt/sec_fsm.c
+@@ -798,7 +798,7 @@ BOOLEAN secFsmEventPTKInstalled(IN P_ADAPTER_T prAdapter, IN P_STA_RECORD_T prSt
+ 		return TRUE;	/* Not PTK */
+ 
+ #if DBG
+-	DBGLOG(RSN, TRACE, "%pM Sec state %s\n", prSta->aucMacAdd),
++	DBGLOG(RSN, TRACE, "%pM Sec state %s\n", prSta->aucMacAddr,
+ 			    apucDebugSecState[prSecInfo->eCurrentState]);
+ #else
+ 	DBGLOG(RSN, TRACE, "%pM Sec state [%d]\n", prSta->aucMacAddr, prSecInfo->eCurrentState);
+diff --git a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+index 36226d1b7f46..1e9b4cc75379 100644
+--- a/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
++++ b/drivers/misc/mediatek/connectivity/wlan/gen2/os/linux/gl_kal.c
+@@ -1281,7 +1281,7 @@ VOID kalUpdateRxCSUMOffloadParam(IN PVOID pvPacket, IN ENUM_CSUM_RESULT_T aeCSUM
+ 		else if (aeCSUM[CSUM_TYPE_UDP] == CSUM_RES_FAILED)
+ 			DBGLOG(RX, TRACE, "RX: \"bad UDP Checksum\" Packet\n");
+ 		else
+-			/* Do nothing */
++			/* Do nothing */;
+ #endif
+ 	}
+ 

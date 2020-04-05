@@ -1,0 +1,2093 @@
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/common/wlan_lib.c mt6625-kernel/common/wlan_lib.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/common/wlan_lib.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/common/wlan_lib.c	2020-03-24 22:25:48.753205225 +0800
+@@ -5835,6 +5835,7 @@
+ 					x++;
+ 					continue;
+ 				}
++				/* FALLTHRU */
+ 			case '\n':
+ 				/* \ <lf> -> line continuation */
+ 				x++;
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/common/wlan_oid.c mt6625-kernel/common/wlan_oid.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/common/wlan_oid.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/common/wlan_oid.c	2020-03-24 22:25:48.753205225 +0800
+@@ -6555,9 +6555,11 @@
+ 	case ParamDeviceStateD1:
+ 		DBGLOG(OID, INFO, "Set Power State: D1\n");
+ 		/* no break here */
++		/* FALLTHRU */
+ 	case ParamDeviceStateD2:
+ 		DBGLOG(OID, INFO, "Set Power State: D2\n");
+ 		/* no break here */
++		/* FALLTHRU */
+ 	case ParamDeviceStateD3:
+ 		DBGLOG(OID, INFO, "Set Power State: D3\n");
+ 		fgRetValue = nicpmSetAcpiPowerD3(prAdapter);
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/debug.h mt6625-kernel/include/debug.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/debug.h	1970-01-01 08:00:00.000000000 +0800
++++ mt6625-kernel/include/debug.h	2020-03-24 22:25:48.753205225 +0800
+@@ -0,0 +1,486 @@
++/*
++** Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/include/debug.h#1
++*/
++
++/*! \file   debug.h
++    \brief  Definition of SW debugging level.
++
++    In this file, it describes the definition of various SW debugging levels and
++    assert functions.
++*/
++
++/*
++** Log: debug.h
++ *
++ * 12 16 2011 wh.su
++ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
++ * fixed the Windows DDK free build compiling error.
++ *
++ * 11 24 2011 wh.su
++ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
++ * Adjust code for DBG and CONFIG_XLOG.
++ *
++ * 11 11 2011 wh.su
++ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
++ * modify the xlog related code.
++ *
++ * 11 10 2011 wh.su
++ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
++ * Using the new XLOG define for dum Memory.
++ *
++ * 11 03 2011 wh.su
++ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
++ * Add dumpMemory8 at XLOG support.
++ *
++ * 11 02 2011 wh.su
++ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
++ * adding the code for XLOG.
++ *
++ * 08 31 2011 cm.chang
++ * [WCXRP00000969] [MT6620 Wi-Fi][Driver][FW] Channel list for 5G band based on country code
++ * .
++ *
++ * 01 27 2011 tsaiyuan.hsu
++ * [WCXRP00000392] [MT6620 Wi-Fi][Driver] Add Roaming Support
++ * add roaming fsm
++ * 1. not support 11r, only use strength of signal to determine roaming.
++ * 2. not enable CFG_SUPPORT_ROAMING until completion of full test.
++ * 3. in 6620, adopt work-around to avoid sign extension problem of cck of hw
++ * 4. assume that change of link quality in smooth way.
++ *
++ * 01 07 2011 wh.su
++ * [WCXRP00000326] [MT6620][Wi-Fi][Driver] check in the binary format gl_sec.o.new instead of use change type!!!
++ * .
++ *
++ * 09 23 2010 cp.wu
++ * NULL
++ * add BOW index for debugging message and passing compilation
++ *
++ * 07 20 2010 wh.su
++ *
++ * adding the wapi code.
++ *
++ * 07 08 2010 cp.wu
++ *
++ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
++ *
++ * 06 21 2010 yarco.yang
++ * [WPD00003837][MT6620]Data Path Refine
++ * Support CFG_MQM_MIGRATION flag
++ *
++ * 06 17 2010 yuche.tsai
++ * [WPD00003839][MT6620 5931][P2P] Feature migration
++ * Add one more debug moduel for P2P.
++ *
++ * 06 14 2010 cp.wu
++ * [WPD00003833][MT6620 and MT5931] Driver migration
++ * add management dispatching function table.
++ *
++ * 06 11 2010 cp.wu
++ * [WPD00003833][MT6620 and MT5931] Driver migration
++ * add bss.c.
++ *
++ * 06 11 2010 cp.wu
++ * [WPD00003833][MT6620 and MT5931] Driver migration
++ * 1) migrate assoc.c.
++ * 2) add ucTxSeqNum for tracking frames which needs TX-DONE awareness
++ * 3) add configuration options for CNM_MEM and RSN modules
++ * 4) add data path for management frames
++ * 5) eliminate rPacketInfo of MSDU_INFO_T
++ *
++ * 06 10 2010 cp.wu
++ * [WPD00003833][MT6620 and MT5931] Driver migration
++ * add debug module index for cnm and ais.
++ *
++ * 06 06 2010 kevin.huang
++ * [WPD00003832][MT6620 5931] Create driver base
++ * [MT6620 5931] Create driver base
++ *
++ * 05 17 2010 cp.wu
++ * [WPD00001943]Create WiFi test driver framework on WinXP
++ * add CFG_STARTUP_DEBUG for debugging starting up issue.
++ *
++ * 04 26 2010 cp.wu
++ * [WPD00001943]Create WiFi test driver framework on WinXP
++ * 1) surpress compiler warning
++ * 2) when acqruing LP-own, keep writing WHLPCR whenever OWN is not acquired yet
++**  \main\maintrunk.MT6620WiFiDriver_Prj\4 2009-10-29 19:47:50 GMT mtk01084
++**  add emu category
++**  \main\maintrunk.MT6620WiFiDriver_Prj\3 2009-04-17 18:12:04 GMT mtk01426
++**  Don't use dynamic memory allocate for debug message
++**  \main\maintrunk.MT6620WiFiDriver_Prj\2 2009-03-10 20:11:29 GMT mtk01426
++**  Init for develop
++**
++*/
++
++#ifndef _DEBUG_H
++#define _DEBUG_H
++
++/*******************************************************************************
++*                         C O M P I L E R   F L A G S
++********************************************************************************
++*/
++#ifndef BUILD_QA_DBG
++#define BUILD_QA_DBG 0
++#endif
++
++/*******************************************************************************
++*                    E X T E R N A L   R E F E R E N C E S
++********************************************************************************
++*/
++#include "gl_typedef.h"
++
++extern UINT_8 aucDebugModule[];
++extern UINT_32 u4DebugModule;
++
++/*******************************************************************************
++*                              C O N S T A N T S
++********************************************************************************
++*/
++/* Define debug category (class):
++ * (1) ERROR (2) WARN (3) STATE (4) EVENT (5) TRACE (6) INFO (7) LOUD (8) TEMP
++ */
++#define DBG_CLASS_ERROR         BIT(0)
++#define DBG_CLASS_WARN          BIT(1)
++#define DBG_CLASS_STATE         BIT(2)
++#define DBG_CLASS_EVENT         BIT(3)
++#define DBG_CLASS_TRACE         BIT(4)
++#define DBG_CLASS_INFO          BIT(5)
++#define DBG_CLASS_LOUD          BIT(6)
++#define DBG_CLASS_TEMP          BIT(7)
++#define DBG_CLASS_MASK          BITS(0, 7)
++
++#if defined(LINUX)
++#define DBG_PRINTF_64BIT_DEC    "lld"
++
++#else /* Windows */
++#define DBG_PRINTF_64BIT_DEC    "I64d"
++
++#endif
++/*******************************************************************************
++*                             D A T A   T Y P E S
++********************************************************************************
++*/
++/* Define debug module index */
++typedef enum _ENUM_DBG_MODULE_T {
++	DBG_INIT_IDX = 0,	/* For driver initial */
++	DBG_HAL_IDX,		/* For HAL(HW) Layer */
++	DBG_INTR_IDX,		/* For Interrupt */
++	DBG_REQ_IDX,
++	DBG_TX_IDX,
++	DBG_RX_IDX,
++	DBG_RFTEST_IDX,		/* For RF test mode */
++	DBG_EMU_IDX,		/* Developer specific */
++
++	DBG_SW1_IDX,		/* Developer specific */
++	DBG_SW2_IDX,		/* Developer specific */
++	DBG_SW3_IDX,		/* Developer specific */
++	DBG_SW4_IDX,		/* Developer specific */
++
++	DBG_HEM_IDX,		/* HEM */
++	DBG_AIS_IDX,		/* AIS */
++	DBG_RLM_IDX,		/* RLM */
++	DBG_MEM_IDX,		/* RLM */
++	DBG_CNM_IDX,		/* CNM */
++	DBG_RSN_IDX,		/* RSN */
++	DBG_BSS_IDX,		/* BSS */
++	DBG_SCN_IDX,		/* SCN */
++	DBG_SAA_IDX,		/* SAA */
++	DBG_AAA_IDX,		/* AAA */
++	DBG_P2P_IDX,		/* P2P */
++	DBG_QM_IDX,		/* QUE_MGT */
++	DBG_SEC_IDX,		/* SEC */
++	DBG_BOW_IDX,		/* BOW */
++	DBG_WAPI_IDX,		/* WAPI */
++	DBG_ROAMING_IDX,	/* ROAMING */
++	DBG_TDLS_IDX,		/* TDLS *//* CFG_SUPPORT_TDLS */
++	DBG_OID_IDX,
++	DBG_NIC_IDX,
++
++	DBG_MODULE_NUM		/* Notice the XLOG check */
++} ENUM_DBG_MODULE_T;
++
++/* XLOG */
++/* #define XLOG_DBG_MODULE_IDX    28 */ /* DBG_MODULE_NUM */
++/* #if (XLOG_DBG_MODULE_IDX != XLOG_DBG_MODULE_IDX) */
++/* #error "Please modify the DBG_MODULE_NUM and make sure this include at XLOG" */
++/* #endif */
++
++/* Define who owns developer specific index */
++#define DBG_YARCO_IDX           DBG_SW1_IDX
++#define DBG_KEVIN_IDX           DBG_SW2_IDX
++#define DBG_CMC_IDX             DBG_SW3_IDX
++#define DBG_GEORGE_IDX          DBG_SW4_IDX
++
++/*******************************************************************************
++*                            P U B L I C   D A T A
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                           P R I V A T E   D A T A
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                                 M A C R O S
++********************************************************************************
++*/
++/* Debug print format string for the OS system time */
++#define OS_SYSTIME_DBG_FORMAT               "0x%08x"
++
++/* Debug print argument for the OS system time */
++#define OS_SYSTIME_DBG_ARGUMENT(systime)    (systime)
++
++/* Debug print format string for the MAC Address */
++#define MACSTR          "%pM"
++/* "%02x:%02x:%02x:%02x:%02x:%02x" */
++
++/* Debug print argument for the MAC Address */
++#define MAC2STR(a)	a
++/* ((PUINT_8)a)[0], ((PUINT_8)a)[1], ((PUINT_8)a)[2], ((PUINT_8)a)[3], ((PUINT_8)a)[4], ((PUINT_8)a)[5] */
++
++/* The pre-defined format to dump the value of a varaible with its name shown. */
++#define DUMPVAR(variable, format)           (#variable " = " format "\n", variable)
++
++/* The pre-defined format to dump the MAC type value with its name shown. */
++#define DUMPMACADDR(addr)                   (#addr " = %pM\n", (addr))
++
++/* Basiclly, we just do renaming of KAL functions although they should
++ * be defined as "Nothing to do" if DBG=0. But in some compiler, the macro
++ * syntax does not support  #define LOG_FUNC(x,...)
++ *
++ * A caller shall not invoke these three macros when DBG=0.
++ */
++
++/*LOG_FUNC("[wlan]%s:(" #_Module " " #_Class ") "_Fmt, __func__, ##__VA_ARGS__);*/
++
++#define LOG_FUNC                kalPrint
++
++#if defined(LINUX)
++#define DBGLOG(_Module, _Class, _Fmt, ...) \
++	do { \
++		if ((aucDebugModule[DBG_##_Module##_IDX] & DBG_CLASS_##_Class) == 0) \
++			break; \
++		LOG_FUNC("%s:(" #_Module " " #_Class ")"_Fmt, __func__, ##__VA_ARGS__); \
++	} while (0)
++#else
++#define DBGLOG(_Module, _Class, _Fmt)
++#endif
++
++#if DBG
++
++#define TMP_BUF_LEN   256
++#define TMP_WBUF_LEN  (TMP_BUF_LEN * 2)
++
++extern PINT_16 g_wbuf_p;
++extern PINT_8 g_buf_p;
++
++#define DEBUGFUNC(_Func)
++
++#define WARNLOG(_Fmt) \
++{ \
++    if (aucDebugModule[DBG_INIT_IDX] & DBG_CLASS_WARN) { \
++        LOG_FUNC("**Warning[%s:%d]-", __FILE__, __LINE__); \
++        LOG_FUNC _Fmt; \
++    } \
++}
++
++#define DBGLOG_MEM8(_Module, _Class, _StartAddr, _Length) \
++	{ \
++	    if (aucDebugModule[DBG_##_Module##_IDX] & DBG_CLASS_##_Class) { \
++		LOG_FUNC("%s: (" #_Module " " #_Class ")\n", __func__); \
++		dumpMemory8((PUINT_8) (_StartAddr), (UINT_32) (_Length)); \
++	    } \
++	}
++
++#define DBGLOG_MEM32(_Module, _Class, _StartAddr, _Length) \
++	{ \
++	    if (aucDebugModule[DBG_##_Module##_IDX] & DBG_CLASS_##_Class) { \
++		LOG_FUNC("%s: (" #_Module " " #_Class ")\n", __func__); \
++		dumpMemory32((PUINT_32) (_StartAddr), (UINT_32) (_Length)); \
++	    } \
++	}
++    /*lint -restore */
++
++    /*lint -save -e961 use of '#undef' is discouraged */
++#undef ASSERT
++    /*lint -restore */
++
++#ifdef _lint
++#define ASSERT(_exp) \
++	{ \
++		if (!(_exp)) { \
++			do {} while (1); \
++		} \
++	}
++#else
++#define ASSERT(_exp) \
++	{ \
++		_Pragma("GCC diagnostic push") \
++		_Pragma("GCC diagnostic ignored \"-Waddress\"") \
++	    if (!(_exp) && !fgIsBusAccessFailed) { \
++		LOG_FUNC("Assertion failed: %s:%d %s\n", __FILE__, __LINE__, #_exp); \
++		kalBreakPoint(); \
++	    } \
++	    _Pragma("GCC diagnostic pop") \
++	}
++#endif /* _lint */
++
++#define ASSERT_REPORT(_exp, _fmt) \
++	{ \
++		_Pragma("GCC diagnostic push") \
++		_Pragma("GCC diagnostic ignored \"-Waddress\"") \
++	    if (!(_exp) && !fgIsBusAccessFailed) { \
++		LOG_FUNC("Assertion failed: %s:%d %s\n", __FILE__, __LINE__, #_exp); \
++		LOG_FUNC _fmt; \
++		kalBreakPoint(); \
++	    } \
++	    _Pragma("GCC diagnostic pop") \
++	}
++
++#define DISP_STRING(_str)       _str
++
++#else /* !DBG */
++
++#define DEBUGFUNC(_Func)
++#define INITLOG(_Fmt)
++#define ERRORLOG(_Fmt)
++#define WARNLOG(_Fmt)
++
++#define DBGLOG_MEM8(_Module, _Class, _StartAddr, _Length)
++#define DBGLOG_MEM32(_Module, _Class, _StartAddr, _Length)
++
++#undef ASSERT
++
++#if BUILD_QA_DBG
++#if defined(LINUX)		/* For debugging in Linux w/o GDB */
++#define ASSERT(_exp) \
++	{ \
++		_Pragma("GCC diagnostic push") \
++		_Pragma("GCC diagnostic ignored \"-Waddress\"") \
++		if (!(_exp) && !fgIsBusAccessFailed) { \
++			LOG_FUNC("Assertion failed: %s:%d (%s)\n", __FILE__, __LINE__, #_exp); \
++			kalBreakPoint(); \
++		} \
++	    _Pragma("GCC diagnostic pop") \
++	}
++
++#define ASSERT_REPORT(_exp, _fmt) \
++	{ \
++		_Pragma("GCC diagnostic push") \
++		_Pragma("GCC diagnostic ignored \"-Waddress\"") \
++		if (!(_exp) && !fgIsBusAccessFailed) { \
++			LOG_FUNC("Assertion failed: %s:%d (%s)\n", __FILE__, __LINE__, #_exp); \
++			LOG_FUNC _fmt; \
++			kalBreakPoint(); \
++		} \
++		_Pragma("GCC diagnostic pop") \
++	}
++#else
++#ifdef WINDOWS_CE
++#define UNICODE_TEXT(_msg)  TEXT(_msg)
++#define ASSERT(_exp) \
++		{ \
++		    if (!(_exp) && !fgIsBusAccessFailed) { \
++			TCHAR rUbuf[256]; \
++			kalBreakPoint(); \
++			_stprintf(rUbuf, TEXT("Assertion failed: %s:%d %s\n"), \
++			    UNICODE_TEXT(__FILE__), \
++			    __LINE__, \
++			    UNICODE_TEXT(#_exp)); \
++			MessageBox(NULL, rUbuf, TEXT("ASSERT!"), MB_OK); \
++		    } \
++		}
++
++#define ASSERT_REPORT(_exp, _fmt) \
++		{ \
++		    if (!(_exp) && !fgIsBusAccessFailed) { \
++			TCHAR rUbuf[256]; \
++			kalBreakPoint(); \
++			_stprintf(rUbuf, TEXT("Assertion failed: %s:%d %s\n"), \
++			    UNICODE_TEXT(__FILE__), \
++			    __LINE__, \
++			    UNICODE_TEXT(#_exp)); \
++			MessageBox(NULL, rUbuf, TEXT("ASSERT!"), MB_OK); \
++		    } \
++		}
++#else
++#define ASSERT(_exp) \
++		{ \
++		    if (!(_exp) && !fgIsBusAccessFailed) { \
++			kalBreakPoint(); \
++		    } \
++		}
++
++#define ASSERT_REPORT(_exp, _fmt) \
++		{ \
++		    if (!(_exp) && !fgIsBusAccessFailed) { \
++			kalBreakPoint(); \
++		    } \
++		}
++#endif /* WINDOWS_CE */
++#endif /* LINUX */
++#else
++#define ASSERT(_exp) \
++	{ \
++	    _Pragma("GCC diagnostic push") \
++	    _Pragma("GCC diagnostic ignored \"-Waddress\"") \
++	    if (!(_exp) && !fgIsBusAccessFailed) { \
++		LOG_FUNC("Warning at %s:%d (%s)\n", __func__, __LINE__, #_exp); \
++	    } \
++	    _Pragma("GCC diagnostic pop") \
++	}
++
++#define ASSERT_REPORT(_exp, _fmt) \
++	{ \
++	    _Pragma("GCC diagnostic push") \
++	    _Pragma("GCC diagnostic ignored \"-Waddress\"") \
++	    if (!(_exp) && !fgIsBusAccessFailed) { \
++		LOG_FUNC("Warning at %s:%d (%s)\n", __func__, __LINE__, #_exp); \
++		LOG_FUNC _fmt; \
++	    } \
++	    _Pragma("GCC diagnostic pop") \
++	}
++#endif /* BUILD_QA_DBG */
++
++#define DISP_STRING(_str)       ""
++
++#endif /* DBG */
++
++#if CFG_STARTUP_DEBUG
++#if defined(LINUX)
++#define DBGPRINTF kalPrint
++#else
++#define DBGPRINTF DbgPrint
++#endif
++#else
++#define DBGPRINTF(...)
++#endif
++
++/* The following macro is used for debugging packed structures. */
++#ifndef DATA_STRUCT_INSPECTING_ASSERT
++#define DATA_STRUCT_INSPECTING_ASSERT(expr) \
++{ \
++	switch (0) {case 0: case (expr): default:; } \
++}
++#endif
++
++/*******************************************************************************
++*                  F U N C T I O N   D E C L A R A T I O N S
++********************************************************************************
++*/
++VOID dumpMemory8(IN PUINT_8 pucStartAddr, IN UINT_32 u4Length);
++
++VOID dumpMemory32(IN PUINT_32 pu4StartAddr, IN UINT_32 u4Length);
++
++VOID wlanDebugInit(VOID);
++VOID wlanDebugUninit(VOID);
++VOID wlanTraceReleaseTcRes(P_ADAPTER_T prAdapter, PUINT_8 aucTxRlsCnt, UINT_8 ucAvailable);
++VOID wlanTraceTxCmd(P_CMD_INFO_T prCmd);
++VOID wlanDumpTcResAndTxedCmd(PUINT_8 pucBuf, UINT_32 maxLen);
++/*******************************************************************************
++*                              F U N C T I O N S
++********************************************************************************
++*/
++#endif /* _DEBUG_H */
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/mgmt/mgmt_rate.h mt6625-kernel/include/mgmt/mgmt_rate.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/mgmt/mgmt_rate.h	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/include/mgmt/mgmt_rate.h	1970-01-01 08:00:00.000000000 +0800
+@@ -1,93 +0,0 @@
+-/*
+-** Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/include/mgmt/rate.h#1
+-*/
+-
+-/*! \file  rate.h
+-    \brief This file contains the rate utility function of
+-	   IEEE 802.11 family for MediaTek 802.11 Wireless LAN Adapters.
+-*/
+-
+-/*
+-** Log: rate.h
+- *
+- * 09 03 2010 kevin.huang
+- * NULL
+- * Refine #include sequence and solve recursive/nested #include issue
+- *
+- * 07 08 2010 cp.wu
+- *
+- * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+- *
+- * 06 10 2010 cp.wu
+- * [WPD00003833][MT6620 and MT5931] Driver migration
+- * add buildable & linkable ais_fsm.c
+- *
+- * related reference are still waiting to be resolved
+- *
+-*/
+-
+-#ifndef _RATE_H
+-#define _RATE_H
+-
+-/*******************************************************************************
+-*                         C O M P I L E R   F L A G S
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                    E X T E R N A L   R E F E R E N C E S
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                              C O N S T A N T S
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                         D A T A   T Y P E S
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                            P U B L I C   D A T A
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                           P R I V A T E   D A T A
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                                 M A C R O S
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                  F U N C T I O N   D E C L A R A T I O N S
+-********************************************************************************
+-*/
+-/*----------------------------------------------------------------------------*/
+-/* Routines in rate.c                                                         */
+-/*----------------------------------------------------------------------------*/
+-VOID
+-rateGetRateSetFromIEs(IN P_IE_SUPPORTED_RATE_T prIeSupportedRate,
+-		      IN P_IE_EXT_SUPPORTED_RATE_T prIeExtSupportedRate,
+-		      OUT PUINT_16 pu2OperationalRateSet,
+-		      OUT PUINT_16 pu2BSSBasicRateSet, OUT PBOOLEAN pfgIsUnknownBSSBasicRate);
+-
+-VOID
+-rateGetDataRatesFromRateSet(IN UINT_16 u2OperationalRateSet,
+-			    IN UINT_16 u2BSSBasicRateSet, OUT PUINT_8 pucDataRates, OUT PUINT_8 pucDataRatesLen);
+-
+-BOOLEAN rateGetHighestRateIndexFromRateSet(IN UINT_16 u2RateSet, OUT PUINT_8 pucHighestRateIndex);
+-
+-BOOLEAN rateGetLowestRateIndexFromRateSet(IN UINT_16 u2RateSet, OUT PUINT_8 pucLowestRateIndex);
+-
+-/*******************************************************************************
+-*                              F U N C T I O N S
+-********************************************************************************
+-*/
+-
+-#endif /* _RATE_H */
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/mgmt/rate.h mt6625-kernel/include/mgmt/rate.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/mgmt/rate.h	1970-01-01 08:00:00.000000000 +0800
++++ mt6625-kernel/include/mgmt/rate.h	2020-03-24 22:25:48.753205225 +0800
+@@ -0,0 +1,93 @@
++/*
++** Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/include/mgmt/rate.h#1
++*/
++
++/*! \file  rate.h
++    \brief This file contains the rate utility function of
++	   IEEE 802.11 family for MediaTek 802.11 Wireless LAN Adapters.
++*/
++
++/*
++** Log: rate.h
++ *
++ * 09 03 2010 kevin.huang
++ * NULL
++ * Refine #include sequence and solve recursive/nested #include issue
++ *
++ * 07 08 2010 cp.wu
++ *
++ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
++ *
++ * 06 10 2010 cp.wu
++ * [WPD00003833][MT6620 and MT5931] Driver migration
++ * add buildable & linkable ais_fsm.c
++ *
++ * related reference are still waiting to be resolved
++ *
++*/
++
++#ifndef _RATE_H
++#define _RATE_H
++
++/*******************************************************************************
++*                         C O M P I L E R   F L A G S
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                    E X T E R N A L   R E F E R E N C E S
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                              C O N S T A N T S
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                         D A T A   T Y P E S
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                            P U B L I C   D A T A
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                           P R I V A T E   D A T A
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                                 M A C R O S
++********************************************************************************
++*/
++
++/*******************************************************************************
++*                  F U N C T I O N   D E C L A R A T I O N S
++********************************************************************************
++*/
++/*----------------------------------------------------------------------------*/
++/* Routines in rate.c                                                         */
++/*----------------------------------------------------------------------------*/
++VOID
++rateGetRateSetFromIEs(IN P_IE_SUPPORTED_RATE_T prIeSupportedRate,
++		      IN P_IE_EXT_SUPPORTED_RATE_T prIeExtSupportedRate,
++		      OUT PUINT_16 pu2OperationalRateSet,
++		      OUT PUINT_16 pu2BSSBasicRateSet, OUT PBOOLEAN pfgIsUnknownBSSBasicRate);
++
++VOID
++rateGetDataRatesFromRateSet(IN UINT_16 u2OperationalRateSet,
++			    IN UINT_16 u2BSSBasicRateSet, OUT PUINT_8 pucDataRates, OUT PUINT_8 pucDataRatesLen);
++
++BOOLEAN rateGetHighestRateIndexFromRateSet(IN UINT_16 u2RateSet, OUT PUINT_8 pucHighestRateIndex);
++
++BOOLEAN rateGetLowestRateIndexFromRateSet(IN UINT_16 u2RateSet, OUT PUINT_8 pucLowestRateIndex);
++
++/*******************************************************************************
++*                              F U N C T I O N S
++********************************************************************************
++*/
++
++#endif /* _RATE_H */
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/mtk_debug.h mt6625-kernel/include/mtk_debug.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/mtk_debug.h	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/include/mtk_debug.h	1970-01-01 08:00:00.000000000 +0800
+@@ -1,466 +0,0 @@
+-/*
+-** Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/include/debug.h#1
+-*/
+-
+-/*! \file   debug.h
+-    \brief  Definition of SW debugging level.
+-
+-    In this file, it describes the definition of various SW debugging levels and
+-    assert functions.
+-*/
+-
+-/*
+-** Log: debug.h
+- *
+- * 12 16 2011 wh.su
+- * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+- * fixed the Windows DDK free build compiling error.
+- *
+- * 11 24 2011 wh.su
+- * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+- * Adjust code for DBG and CONFIG_XLOG.
+- *
+- * 11 11 2011 wh.su
+- * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+- * modify the xlog related code.
+- *
+- * 11 10 2011 wh.su
+- * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+- * Using the new XLOG define for dum Memory.
+- *
+- * 11 03 2011 wh.su
+- * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+- * Add dumpMemory8 at XLOG support.
+- *
+- * 11 02 2011 wh.su
+- * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+- * adding the code for XLOG.
+- *
+- * 08 31 2011 cm.chang
+- * [WCXRP00000969] [MT6620 Wi-Fi][Driver][FW] Channel list for 5G band based on country code
+- * .
+- *
+- * 01 27 2011 tsaiyuan.hsu
+- * [WCXRP00000392] [MT6620 Wi-Fi][Driver] Add Roaming Support
+- * add roaming fsm
+- * 1. not support 11r, only use strength of signal to determine roaming.
+- * 2. not enable CFG_SUPPORT_ROAMING until completion of full test.
+- * 3. in 6620, adopt work-around to avoid sign extension problem of cck of hw
+- * 4. assume that change of link quality in smooth way.
+- *
+- * 01 07 2011 wh.su
+- * [WCXRP00000326] [MT6620][Wi-Fi][Driver] check in the binary format gl_sec.o.new instead of use change type!!!
+- * .
+- *
+- * 09 23 2010 cp.wu
+- * NULL
+- * add BOW index for debugging message and passing compilation
+- *
+- * 07 20 2010 wh.su
+- *
+- * adding the wapi code.
+- *
+- * 07 08 2010 cp.wu
+- *
+- * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+- *
+- * 06 21 2010 yarco.yang
+- * [WPD00003837][MT6620]Data Path Refine
+- * Support CFG_MQM_MIGRATION flag
+- *
+- * 06 17 2010 yuche.tsai
+- * [WPD00003839][MT6620 5931][P2P] Feature migration
+- * Add one more debug moduel for P2P.
+- *
+- * 06 14 2010 cp.wu
+- * [WPD00003833][MT6620 and MT5931] Driver migration
+- * add management dispatching function table.
+- *
+- * 06 11 2010 cp.wu
+- * [WPD00003833][MT6620 and MT5931] Driver migration
+- * add bss.c.
+- *
+- * 06 11 2010 cp.wu
+- * [WPD00003833][MT6620 and MT5931] Driver migration
+- * 1) migrate assoc.c.
+- * 2) add ucTxSeqNum for tracking frames which needs TX-DONE awareness
+- * 3) add configuration options for CNM_MEM and RSN modules
+- * 4) add data path for management frames
+- * 5) eliminate rPacketInfo of MSDU_INFO_T
+- *
+- * 06 10 2010 cp.wu
+- * [WPD00003833][MT6620 and MT5931] Driver migration
+- * add debug module index for cnm and ais.
+- *
+- * 06 06 2010 kevin.huang
+- * [WPD00003832][MT6620 5931] Create driver base
+- * [MT6620 5931] Create driver base
+- *
+- * 05 17 2010 cp.wu
+- * [WPD00001943]Create WiFi test driver framework on WinXP
+- * add CFG_STARTUP_DEBUG for debugging starting up issue.
+- *
+- * 04 26 2010 cp.wu
+- * [WPD00001943]Create WiFi test driver framework on WinXP
+- * 1) surpress compiler warning
+- * 2) when acqruing LP-own, keep writing WHLPCR whenever OWN is not acquired yet
+-**  \main\maintrunk.MT6620WiFiDriver_Prj\4 2009-10-29 19:47:50 GMT mtk01084
+-**  add emu category
+-**  \main\maintrunk.MT6620WiFiDriver_Prj\3 2009-04-17 18:12:04 GMT mtk01426
+-**  Don't use dynamic memory allocate for debug message
+-**  \main\maintrunk.MT6620WiFiDriver_Prj\2 2009-03-10 20:11:29 GMT mtk01426
+-**  Init for develop
+-**
+-*/
+-
+-#ifndef _DEBUG_H
+-#define _DEBUG_H
+-
+-/*******************************************************************************
+-*                         C O M P I L E R   F L A G S
+-********************************************************************************
+-*/
+-#ifndef BUILD_QA_DBG
+-#define BUILD_QA_DBG 0
+-#endif
+-
+-/*******************************************************************************
+-*                    E X T E R N A L   R E F E R E N C E S
+-********************************************************************************
+-*/
+-#include "gl_typedef.h"
+-
+-extern UINT_8 aucDebugModule[];
+-extern UINT_32 u4DebugModule;
+-
+-/*******************************************************************************
+-*                              C O N S T A N T S
+-********************************************************************************
+-*/
+-/* Define debug category (class):
+- * (1) ERROR (2) WARN (3) STATE (4) EVENT (5) TRACE (6) INFO (7) LOUD (8) TEMP
+- */
+-#define DBG_CLASS_ERROR         BIT(0)
+-#define DBG_CLASS_WARN          BIT(1)
+-#define DBG_CLASS_STATE         BIT(2)
+-#define DBG_CLASS_EVENT         BIT(3)
+-#define DBG_CLASS_TRACE         BIT(4)
+-#define DBG_CLASS_INFO          BIT(5)
+-#define DBG_CLASS_LOUD          BIT(6)
+-#define DBG_CLASS_TEMP          BIT(7)
+-#define DBG_CLASS_MASK          BITS(0, 7)
+-
+-#if defined(LINUX)
+-#define DBG_PRINTF_64BIT_DEC    "lld"
+-
+-#else /* Windows */
+-#define DBG_PRINTF_64BIT_DEC    "I64d"
+-
+-#endif
+-/*******************************************************************************
+-*                             D A T A   T Y P E S
+-********************************************************************************
+-*/
+-/* Define debug module index */
+-typedef enum _ENUM_DBG_MODULE_T {
+-	DBG_INIT_IDX = 0,	/* For driver initial */
+-	DBG_HAL_IDX,		/* For HAL(HW) Layer */
+-	DBG_INTR_IDX,		/* For Interrupt */
+-	DBG_REQ_IDX,
+-	DBG_TX_IDX,
+-	DBG_RX_IDX,
+-	DBG_RFTEST_IDX,		/* For RF test mode */
+-	DBG_EMU_IDX,		/* Developer specific */
+-
+-	DBG_SW1_IDX,		/* Developer specific */
+-	DBG_SW2_IDX,		/* Developer specific */
+-	DBG_SW3_IDX,		/* Developer specific */
+-	DBG_SW4_IDX,		/* Developer specific */
+-
+-	DBG_HEM_IDX,		/* HEM */
+-	DBG_AIS_IDX,		/* AIS */
+-	DBG_RLM_IDX,		/* RLM */
+-	DBG_MEM_IDX,		/* RLM */
+-	DBG_CNM_IDX,		/* CNM */
+-	DBG_RSN_IDX,		/* RSN */
+-	DBG_BSS_IDX,		/* BSS */
+-	DBG_SCN_IDX,		/* SCN */
+-	DBG_SAA_IDX,		/* SAA */
+-	DBG_AAA_IDX,		/* AAA */
+-	DBG_P2P_IDX,		/* P2P */
+-	DBG_QM_IDX,		/* QUE_MGT */
+-	DBG_SEC_IDX,		/* SEC */
+-	DBG_BOW_IDX,		/* BOW */
+-	DBG_WAPI_IDX,		/* WAPI */
+-	DBG_ROAMING_IDX,	/* ROAMING */
+-	DBG_TDLS_IDX,		/* TDLS *//* CFG_SUPPORT_TDLS */
+-	DBG_OID_IDX,
+-	DBG_NIC_IDX,
+-
+-	DBG_MODULE_NUM		/* Notice the XLOG check */
+-} ENUM_DBG_MODULE_T;
+-
+-/* XLOG */
+-/* #define XLOG_DBG_MODULE_IDX    28 */ /* DBG_MODULE_NUM */
+-/* #if (XLOG_DBG_MODULE_IDX != XLOG_DBG_MODULE_IDX) */
+-/* #error "Please modify the DBG_MODULE_NUM and make sure this include at XLOG" */
+-/* #endif */
+-
+-/* Define who owns developer specific index */
+-#define DBG_YARCO_IDX           DBG_SW1_IDX
+-#define DBG_KEVIN_IDX           DBG_SW2_IDX
+-#define DBG_CMC_IDX             DBG_SW3_IDX
+-#define DBG_GEORGE_IDX          DBG_SW4_IDX
+-
+-/*******************************************************************************
+-*                            P U B L I C   D A T A
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                           P R I V A T E   D A T A
+-********************************************************************************
+-*/
+-
+-/*******************************************************************************
+-*                                 M A C R O S
+-********************************************************************************
+-*/
+-/* Debug print format string for the OS system time */
+-#define OS_SYSTIME_DBG_FORMAT               "0x%08x"
+-
+-/* Debug print argument for the OS system time */
+-#define OS_SYSTIME_DBG_ARGUMENT(systime)    (systime)
+-
+-/* Debug print format string for the MAC Address */
+-#define MACSTR          "%pM"
+-/* "%02x:%02x:%02x:%02x:%02x:%02x" */
+-
+-/* Debug print argument for the MAC Address */
+-#define MAC2STR(a)	a
+-/* ((PUINT_8)a)[0], ((PUINT_8)a)[1], ((PUINT_8)a)[2], ((PUINT_8)a)[3], ((PUINT_8)a)[4], ((PUINT_8)a)[5] */
+-
+-/* The pre-defined format to dump the value of a varaible with its name shown. */
+-#define DUMPVAR(variable, format)           (#variable " = " format "\n", variable)
+-
+-/* The pre-defined format to dump the MAC type value with its name shown. */
+-#define DUMPMACADDR(addr)                   (#addr " = %pM\n", (addr))
+-
+-/* Basiclly, we just do renaming of KAL functions although they should
+- * be defined as "Nothing to do" if DBG=0. But in some compiler, the macro
+- * syntax does not support  #define LOG_FUNC(x,...)
+- *
+- * A caller shall not invoke these three macros when DBG=0.
+- */
+-
+-/*LOG_FUNC("[wlan]%s:(" #_Module " " #_Class ") "_Fmt, __func__, ##__VA_ARGS__);*/
+-
+-#define LOG_FUNC                kalPrint
+-
+-#if defined(LINUX)
+-#define DBGLOG(_Module, _Class, _Fmt, ...) \
+-	do { \
+-		if ((aucDebugModule[DBG_##_Module##_IDX] & DBG_CLASS_##_Class) == 0) \
+-			break; \
+-		LOG_FUNC("%s:(" #_Module " " #_Class ")"_Fmt, __func__, ##__VA_ARGS__); \
+-	} while (0)
+-#else
+-#define DBGLOG(_Module, _Class, _Fmt)
+-#endif
+-
+-#if DBG
+-
+-#define TMP_BUF_LEN   256
+-#define TMP_WBUF_LEN  (TMP_BUF_LEN * 2)
+-
+-extern PINT_16 g_wbuf_p;
+-extern PINT_8 g_buf_p;
+-
+-    /* If __FUNCTION__ is already defined by compiler, we just use it. */
+-#if defined(__func__)
+-#define DEBUGFUNC(_Func)
+-#else
+-#define DEBUGFUNC(_Func) \
+-	static const char __func__[] = _Func
+-#endif
+-
+-#define DBGLOG_MEM8(_Module, _Class, _StartAddr, _Length) \
+-	{ \
+-	    if (aucDebugModule[DBG_##_Module##_IDX] & DBG_CLASS_##_Class) { \
+-		LOG_FUNC("%s: (" #_Module " " #_Class ")\n", __func__); \
+-		dumpMemory8((PUINT_8) (_StartAddr), (UINT_32) (_Length)); \
+-	    } \
+-	}
+-
+-#define DBGLOG_MEM32(_Module, _Class, _StartAddr, _Length) \
+-	{ \
+-	    if (aucDebugModule[DBG_##_Module##_IDX] & DBG_CLASS_##_Class) { \
+-		LOG_FUNC("%s: (" #_Module " " #_Class ")\n", __func__); \
+-		dumpMemory32((PUINT_32) (_StartAddr), (UINT_32) (_Length)); \
+-	    } \
+-	}
+-    /*lint -restore */
+-
+-    /*lint -save -e961 use of '#undef' is discouraged */
+-#undef ASSERT
+-    /*lint -restore */
+-
+-#ifdef _lint
+-#define ASSERT(_exp) \
+-	{ \
+-		if (!(_exp)) { \
+-			do {} while (1); \
+-		} \
+-	}
+-#else
+-#define ASSERT(_exp) \
+-	{ \
+-	    if (!(_exp) && !fgIsBusAccessFailed) { \
+-		LOG_FUNC("Assertion failed: %s:%d %s\n", __FILE__, __LINE__, #_exp); \
+-		kalBreakPoint(); \
+-	    } \
+-	}
+-#endif /* _lint */
+-
+-#define ASSERT_REPORT(_exp, _fmt) \
+-	{ \
+-	    if (!(_exp) && !fgIsBusAccessFailed) { \
+-		LOG_FUNC("Assertion failed: %s:%d %s\n", __FILE__, __LINE__, #_exp); \
+-		LOG_FUNC _fmt; \
+-		kalBreakPoint(); \
+-	    } \
+-	}
+-
+-#define DISP_STRING(_str)       _str
+-
+-#else /* !DBG */
+-
+-#define DEBUGFUNC(_Func)
+-#define INITLOG(_Fmt)
+-#define ERRORLOG(_Fmt)
+-#define WARNLOG(_Fmt)
+-
+-#define DBGLOG_MEM8(_Module, _Class, _StartAddr, _Length)
+-#define DBGLOG_MEM32(_Module, _Class, _StartAddr, _Length)
+-
+-#undef ASSERT
+-
+-#if BUILD_QA_DBG
+-#if defined(LINUX)		/* For debugging in Linux w/o GDB */
+-#define ASSERT(_exp) \
+-	{ \
+-		if (!(_exp) && !fgIsBusAccessFailed) { \
+-			LOG_FUNC("Assertion failed: %s:%d (%s)\n", __FILE__, __LINE__, #_exp); \
+-			kalBreakPoint(); \
+-		} \
+-	}
+-
+-#define ASSERT_REPORT(_exp, _fmt) \
+-	{ \
+-		if (!(_exp) && !fgIsBusAccessFailed) { \
+-			LOG_FUNC("Assertion failed: %s:%d (%s)\n", __FILE__, __LINE__, #_exp); \
+-			LOG_FUNC _fmt; \
+-			kalBreakPoint(); \
+-		} \
+-	}
+-#else
+-#ifdef WINDOWS_CE
+-#define UNICODE_TEXT(_msg)  TEXT(_msg)
+-#define ASSERT(_exp) \
+-		{ \
+-		    if (!(_exp) && !fgIsBusAccessFailed) { \
+-			TCHAR rUbuf[256]; \
+-			kalBreakPoint(); \
+-			_stprintf(rUbuf, TEXT("Assertion failed: %s:%d %s\n"), \
+-			    UNICODE_TEXT(__FILE__), \
+-			    __LINE__, \
+-			    UNICODE_TEXT(#_exp)); \
+-			MessageBox(NULL, rUbuf, TEXT("ASSERT!"), MB_OK); \
+-		    } \
+-		}
+-
+-#define ASSERT_REPORT(_exp, _fmt) \
+-		{ \
+-		    if (!(_exp) && !fgIsBusAccessFailed) { \
+-			TCHAR rUbuf[256]; \
+-			kalBreakPoint(); \
+-			_stprintf(rUbuf, TEXT("Assertion failed: %s:%d %s\n"), \
+-			    UNICODE_TEXT(__FILE__), \
+-			    __LINE__, \
+-			    UNICODE_TEXT(#_exp)); \
+-			MessageBox(NULL, rUbuf, TEXT("ASSERT!"), MB_OK); \
+-		    } \
+-		}
+-#else
+-#define ASSERT(_exp) \
+-		{ \
+-		    if (!(_exp) && !fgIsBusAccessFailed) { \
+-			kalBreakPoint(); \
+-		    } \
+-		}
+-
+-#define ASSERT_REPORT(_exp, _fmt) \
+-		{ \
+-		    if (!(_exp) && !fgIsBusAccessFailed) { \
+-			kalBreakPoint(); \
+-		    } \
+-		}
+-#endif /* WINDOWS_CE */
+-#endif /* LINUX */
+-#else
+-#define ASSERT(_exp) \
+-	{ \
+-	    if (!(_exp) && !fgIsBusAccessFailed) { \
+-		LOG_FUNC("Warning at %s:%d (%s)\n", __func__, __LINE__, #_exp); \
+-	    } \
+-	}
+-
+-#define ASSERT_REPORT(_exp, _fmt) \
+-	{ \
+-	    if (!(_exp) && !fgIsBusAccessFailed) { \
+-		LOG_FUNC("Warning at %s:%d (%s)\n", __func__, __LINE__, #_exp); \
+-		LOG_FUNC _fmt; \
+-	    } \
+-	}
+-#endif /* BUILD_QA_DBG */
+-
+-#define DISP_STRING(_str)       ""
+-
+-#endif /* DBG */
+-
+-#if CFG_STARTUP_DEBUG
+-#if defined(LINUX)
+-#define DBGPRINTF kalPrint
+-#else
+-#define DBGPRINTF DbgPrint
+-#endif
+-#else
+-#define DBGPRINTF(...)
+-#endif
+-
+-/* The following macro is used for debugging packed structures. */
+-#ifndef DATA_STRUCT_INSPECTING_ASSERT
+-#define DATA_STRUCT_INSPECTING_ASSERT(expr) \
+-{ \
+-	switch (0) {case 0: case (expr): default:; } \
+-}
+-#endif
+-
+-/*******************************************************************************
+-*                  F U N C T I O N   D E C L A R A T I O N S
+-********************************************************************************
+-*/
+-VOID dumpMemory8(IN PUINT_8 pucStartAddr, IN UINT_32 u4Length);
+-
+-VOID dumpMemory32(IN PUINT_32 pu4StartAddr, IN UINT_32 u4Length);
+-
+-VOID wlanDebugInit(VOID);
+-VOID wlanDebugUninit(VOID);
+-VOID wlanTraceReleaseTcRes(P_ADAPTER_T prAdapter, PUINT_8 aucTxRlsCnt, UINT_8 ucAvailable);
+-VOID wlanTraceTxCmd(P_CMD_INFO_T prCmd);
+-VOID wlanDumpTcResAndTxedCmd(PUINT_8 pucBuf, UINT_32 maxLen);
+-/*******************************************************************************
+-*                              F U N C T I O N S
+-********************************************************************************
+-*/
+-#endif /* _DEBUG_H */
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/p2p_precomp.h mt6625-kernel/include/p2p_precomp.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/p2p_precomp.h	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/include/p2p_precomp.h	2020-03-24 22:25:48.757205235 +0800
+@@ -25,7 +25,7 @@
+ 
+ #include "gl_p2p_os.h"
+ 
+-#include "mtk_debug.h"
++#include "debug.h"
+ 
+ #include "link.h"
+ #include "queue.h"
+@@ -102,7 +102,7 @@
+ #include "rlm_domain.h"
+ #include "rlm_protection.h"
+ #include "rlm_obss.h"
+-#include "mgmt_rate.h"
++#include "rate.h"
+ 
+ #include "aa_fsm.h"
+ 
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/precomp.h mt6625-kernel/include/precomp.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/precomp.h	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/include/precomp.h	2020-03-24 22:25:48.757205235 +0800
+@@ -174,7 +174,7 @@
+ #include "gl_p2p_os.h"
+ #endif
+ 
+-#include "mtk_debug.h"
++#include "debug.h"
+ 
+ #include "link.h"
+ #include "queue.h"
+@@ -258,7 +258,7 @@
+ #include "rlm_domain.h"
+ #include "rlm_protection.h"
+ #include "rlm_obss.h"
+-#include "mgmt_rate.h"
++#include "rate.h"
+ #if CFG_SUPPORT_802_11V
+ #include "wnm.h"
+ #endif
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/wlan_oid.h mt6625-kernel/include/wlan_oid.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/include/wlan_oid.h	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/include/wlan_oid.h	2020-03-24 22:25:48.753205225 +0800
+@@ -221,9 +221,9 @@
+ ********************************************************************************
+ */
+ #if DBG
+-extern UINT_8 aucDebugModule[DBG_MODULE_NUM];
++extern UINT_8 aucDebugModule[];
+ extern UINT_32 u4DebugModule;
+-UINT_32 u4DebugModuleTemp;
++/* UINT_32 u4DebugModuleTemp; */
+ #endif /* DBG */
+ extern int sprintf(char *buf, const char *fmt, ...);
+ 
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/Makefile mt6625-kernel/Makefile
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/Makefile	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/Makefile	2020-03-24 22:25:48.757205235 +0800
+@@ -95,7 +95,13 @@
+ 
+ ccflags-y += -D_HIF_SDIO=1
+ 
++# ----------------------------------------------------
++# Debug control: uncomment/comment to enable/disable
++# ----------------------------------------------------
+ ccflags-y += -DDBG=0
++#ccflags-y += -DDBG=1
++# ----------------------------------------------------
++
+ ccflags-y += -I$(src)/os -I$(src)/os/linux/include -I$(src)/os/linux/hif/ahb/include
+ ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include
+@@ -217,7 +223,7 @@
+ OS_OBJS += gl_proc.o
+ endif
+ 
+-$(warning $(CONFIG_MACH_MT7623))
++#$(warning $(CONFIG_MACH_MT7623))
+ 
+ ifeq ($(CONFIG_MACH_MT7623), y)
+ HIF_AHB_PDMA = $(HIF_DIR)mt8127/
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/p2p_fsm.c mt6625-kernel/mgmt/p2p_fsm.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/p2p_fsm.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/mgmt/p2p_fsm.c	2020-03-24 22:25:48.757205235 +0800
+@@ -2301,7 +2301,7 @@
+ 	P_SW_RFB_T prAssocRspSwRfb = (P_SW_RFB_T) NULL;
+ 	P_BSS_INFO_T prP2pBssInfo = (P_BSS_INFO_T) NULL;
+ 
+-	ASSERT_BREAK((prAdapter != NULL) && (prMsgHdr != NULL));
++	ASSERT((prAdapter != NULL) && (prMsgHdr != NULL));
+ 	DBGLOG(P2P, TRACE, "P2P Join Complete\n");
+ 
+ 	prP2pFsmInfo = prAdapter->rWifiVar.prP2pFsmInfo;
+@@ -2759,12 +2759,12 @@
+ 	P_P2P_FSM_INFO_T prP2pFsmInfo = NULL;
+ 	struct _MSG_P2P_EXTEND_LISTEN_INTERVAL_T *prExtListenMsg = NULL;
+ 
+-	ASSERT_BREAK((prAdapter != NULL) && (prMsgHdr != NULL));
++	ASSERT((prAdapter != NULL) && (prMsgHdr != NULL));
+ 
+ 	prExtListenMsg = (struct _MSG_P2P_EXTEND_LISTEN_INTERVAL_T *) prMsgHdr;
+ 
+ 	prP2pFsmInfo = prAdapter->rWifiVar.prP2pFsmInfo;
+-	ASSERT_BREAK(prP2pFsmInfo);
++	ASSERT(prP2pFsmInfo);
+ 
+ 	if (!prExtListenMsg->wait) {
+ 		DBGLOG(P2P, INFO, "reset listen interval\n");
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/p2p_func.c mt6625-kernel/mgmt/p2p_func.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/p2p_func.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/mgmt/p2p_func.c	2020-03-24 22:25:48.757205235 +0800
+@@ -268,6 +268,7 @@
+ 			switch (eOpMode) {
+ 			case OP_MODE_INFRASTRUCTURE:
+ 				DBGLOG(P2P, TRACE, "p2pFuncSwitchOPMode: Switch to Client.\n");
++				/* FALLTHRU */
+ 			case OP_MODE_ACCESS_POINT:
+ /* if (!IS_BSS_ACTIVE(prP2pBssInfo)) { */
+ /* SET_NET_ACTIVE(prAdapter, NETWORK_TYPE_P2P_INDEX); */
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/scan.c mt6625-kernel/mgmt/scan.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/scan.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/mgmt/scan.c	2020-03-24 22:25:48.757205235 +0800
+@@ -1036,7 +1036,9 @@
+ 	switch (eBSSType) {
+ 	case BSS_TYPE_P2P_DEVICE:
+ 		fgCheckSsid = FALSE;
++		/* FALLTHRU */
+ 	case BSS_TYPE_INFRASTRUCTURE:
++		/* FALLTHRU */
+ 	case BSS_TYPE_BOW_DEVICE:
+ 		{
+ 			prBssDesc = scanSearchBssDescByBssidAndSsid(prAdapter, aucBSSID, fgCheckSsid, prSsid);
+@@ -1045,7 +1047,7 @@
+ 
+ 			return prBssDesc;
+ 		}
+-
++		/* FALLTHRU */
+ 	case BSS_TYPE_IBSS:
+ 		{
+ 			prIBSSBssDesc = scanSearchBssDescByBssidAndSsid(prAdapter, aucBSSID, fgCheckSsid, prSsid);
+@@ -1093,7 +1095,7 @@
+ 			/* CASE V */
+ 			break;	/* Return NULL; */
+ 		}
+-
++		/* FALLTHRU */
+ 	default:
+ 		break;
+ 	}
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/sec_fsm.c mt6625-kernel/mgmt/sec_fsm.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/sec_fsm.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/mgmt/sec_fsm.c	2020-03-24 22:25:48.757205235 +0800
+@@ -798,7 +798,7 @@
+ 		return TRUE;	/* Not PTK */
+ 
+ #if DBG
+-	DBGLOG(RSN, TRACE, "%pM Sec state %s\n", prSta->aucMacAdd),
++	DBGLOG(RSN, TRACE, "%pM Sec state %s\n", prSta->aucMacAddr,
+ 			    apucDebugSecState[prSecInfo->eCurrentState]);
+ #else
+ 	DBGLOG(RSN, TRACE, "%pM Sec state [%d]\n", prSta->aucMacAddr, prSecInfo->eCurrentState);
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/stats.c mt6625-kernel/mgmt/stats.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/mgmt/stats.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/mgmt/stats.c	2020-03-24 22:25:48.757205235 +0800
+@@ -1172,6 +1172,7 @@
+ 	}
+ 	case ETH_P_PRE_1X:
+ 		DBGLOG(RX, INFO, "pre-1x\n");
++		/* FALLTHRU */
+ 	case ETH_P_1X:
+ 	{
+ 		PUINT_8 pucEapol = pucEthBody;
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/nic/nic_rx.c mt6625-kernel/nic/nic_rx.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/nic/nic_rx.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/nic/nic_rx.c	2020-03-24 22:25:48.757205235 +0800
+@@ -818,7 +818,7 @@
+ #endif
+ 
+ #include "gl_os.h"
+-#include "mtk_debug.h"
++#include "debug.h"
+ #include "wlan_lib.h"
+ #include "gl_wext.h"
+ #include <linux/can/netlink.h>
+@@ -2061,7 +2061,6 @@
+ 	case EVENT_ID_BT_OVER_WIFI:
+ #if CFG_ENABLE_BT_OVER_WIFI
+ 		{
+-			UINT_8 aucTmp[sizeof(AMPC_EVENT) + sizeof(BOW_LINK_DISCONNECTED)];
+ 			P_EVENT_BT_OVER_WIFI prEventBtOverWifi;
+ 			P_AMPC_EVENT prBowEvent;
+ 			P_BOW_LINK_CONNECTED prBowLinkConnected;
+@@ -2069,11 +2068,11 @@
+ 
+ 			prEventBtOverWifi = (P_EVENT_BT_OVER_WIFI) (prEvent->aucBuffer);
+ 
+-			/* construct event header */
+-			prBowEvent = (P_AMPC_EVENT) aucTmp;
+-
+ 			if (prEventBtOverWifi->ucLinkStatus == 0) {
+ 				/* Connection */
++				UINT_8 aucTmp[sizeof(AMPC_EVENT) + sizeof(BOW_LINK_CONNECTED)];
++				/* construct event header */
++				prBowEvent = (P_AMPC_EVENT) aucTmp;
+ 				prBowEvent->rHeader.ucEventId = BOW_EVENT_ID_LINK_CONNECTED;
+ 				prBowEvent->rHeader.ucSeqNumber = 0;
+ 				prBowEvent->rHeader.u2PayloadLength = sizeof(BOW_LINK_CONNECTED);
+@@ -2086,6 +2085,9 @@
+ 				kalIndicateBOWEvent(prAdapter->prGlueInfo, prBowEvent);
+ 			} else {
+ 				/* Disconnection */
++				UINT_8 aucTmp[sizeof(AMPC_EVENT) + sizeof(BOW_LINK_DISCONNECTED)];
++				/* construct event header */
++				prBowEvent = (P_AMPC_EVENT) aucTmp;
+ 				prBowEvent->rHeader.ucEventId = BOW_EVENT_ID_LINK_DISCONNECTED;
+ 				prBowEvent->rHeader.ucSeqNumber = 0;
+ 				prBowEvent->rHeader.u2PayloadLength = sizeof(BOW_LINK_DISCONNECTED);
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/nic/que_mgt.c mt6625-kernel/nic/que_mgt.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/nic/que_mgt.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/nic/que_mgt.c	2020-03-24 22:25:48.757205235 +0800
+@@ -5021,7 +5021,7 @@
+ 		if (prBssInfo && prBssInfo->prStaRecOfAP && prBssInfo->prStaRecOfAP->aucMacAddr) {
+ 			if (EQUAL_MAC_ADDR(&(pucData[ETH_TYPE_LEN_OFFSET + 10]), /* source hardware address */
+ 					prBssInfo->prStaRecOfAP->aucMacAddr)) {
+-				strncpy(apIp, &(pucData[ETH_TYPE_LEN_OFFSET + 16]), sizeof(apIp)); /* src ip address */
++				memcpy(apIp, &(pucData[ETH_TYPE_LEN_OFFSET + 16]), sizeof(apIp)); /* src ip address */
+ 				DBGLOG(INIT, TRACE, "get arp response from AP %d.%d.%d.%d\n",
+ 					apIp[0], apIp[1], apIp[2], apIp[3]);
+ 			}
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_bow.c mt6625-kernel/os/linux/gl_bow.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_bow.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/gl_bow.c	2020-03-24 22:25:48.757205235 +0800
+@@ -196,7 +196,7 @@
+ ********************************************************************************
+ */
+ #include "gl_os.h"
+-#include "mtk_debug.h"
++#include "debug.h"
+ #include "wlan_lib.h"
+ #include "gl_wext.h"
+ #include "precomp.h"
+@@ -521,9 +521,9 @@
+ 		return -EFAULT;
+ 	/* permission check */
+ 	if (_IOC_DIR(cmd) & _IOC_READ)
+-		err = !access_ok(VERIFY_WRITE, (void __user *)arg, _IOC_SIZE(cmd));
++		err = !access_ok(/*VERIFY_WRITE,*/ (void __user *)arg, _IOC_SIZE(cmd));
+ 	else if (_IOC_DIR(cmd) & _IOC_WRITE)
+-		err = !access_ok(VERIFY_READ, (void __user *)arg, _IOC_SIZE(cmd));
++		err = !access_ok(/*VERIFY_READ,*/ (void __user *)arg, _IOC_SIZE(cmd));
+ 	if (err)
+ 		return -EFAULT;
+ 
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_cfg80211.c mt6625-kernel/os/linux/gl_cfg80211.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_cfg80211.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/gl_cfg80211.c	2020-03-24 22:25:48.757205235 +0800
+@@ -46,7 +46,7 @@
+ ********************************************************************************
+ */
+ #include "gl_os.h"
+-#include "mtk_debug.h"
++#include "debug.h"
+ #include "wlan_lib.h"
+ #include "gl_wext.h"
+ #include "precomp.h"
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_init.c mt6625-kernel/os/linux/gl_init.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_init.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/gl_init.c	2020-03-24 22:25:48.757205235 +0800
+@@ -927,18 +927,18 @@
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = WIFI_SUBCMD_GET_CHANNEL_LIST
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_get_channel_list
++		.doit = mtk_cfg80211_vendor_get_channel_list,
++		.policy = wifi_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = WIFI_SUBCMD_SET_COUNTRY_CODE
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_set_country_code
++		.doit = mtk_cfg80211_vendor_set_country_code,
++		.policy = wifi_vendor_test_policy
+ 	},
+ 	/* GSCAN */
+ 	{
+@@ -946,72 +946,72 @@
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = GSCAN_SUBCMD_GET_CAPABILITIES
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_get_gscan_capabilities
++		.doit = mtk_cfg80211_vendor_get_gscan_capabilities,
++		.policy = gscan_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = GSCAN_SUBCMD_SET_CONFIG
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_set_config
++		.doit = mtk_cfg80211_vendor_set_config,
++		.policy = gscan_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = GSCAN_SUBCMD_SET_SCAN_CONFIG
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
+-		.doit = mtk_cfg80211_vendor_set_scan_config
++		.doit = mtk_cfg80211_vendor_set_scan_config,
++		.policy = gscan_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = GSCAN_SUBCMD_ENABLE_GSCAN
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_enable_scan
++		.doit = mtk_cfg80211_vendor_enable_scan,
++		.policy = gscan_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = GSCAN_SUBCMD_ENABLE_FULL_SCAN_RESULTS
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_enable_full_scan_results
++		.doit = mtk_cfg80211_vendor_enable_full_scan_results,
++		.policy = gscan_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = GSCAN_SUBCMD_GET_SCAN_RESULTS
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_get_scan_results
++		.doit = mtk_cfg80211_vendor_get_scan_results,
++		.policy = gscan_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = GSCAN_SUBCMD_SET_SIGNIFICANT_CHANGE_CONFIG
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_set_significant_change
++		.doit = mtk_cfg80211_vendor_set_significant_change,
++		.policy = gscan_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = GSCAN_SUBCMD_SET_HOTLIST
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_set_hotlist
++		.doit = mtk_cfg80211_vendor_set_hotlist,
++		.policy = gscan_vendor_test_policy
+ 	},
+ 	/* RTT */
+ 	{
+@@ -1019,9 +1019,9 @@
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = RTT_SUBCMD_GETCAPABILITY
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_get_rtt_capabilities
++		.doit = mtk_cfg80211_vendor_get_rtt_capabilities,
++		.policy = rtt_vendor_test_policy
+ 	},
+ 	/* Link Layer Statistics */
+ 	{
+@@ -1029,9 +1029,9 @@
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = LSTATS_SUBCMD_GET_INFO
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_llstats_get_info
++		.doit = mtk_cfg80211_vendor_llstats_get_info,
++		.policy = lstats_vendor_test_policy
+ 	},
+ 
+ };
+@@ -1156,7 +1156,7 @@
+ static const UINT_16 au16Wlan1dToQueueIdx[8] = { 1, 0, 0, 1, 2, 2, 3, 3 };
+ 
+ static UINT_16 wlanSelectQueue(struct net_device *dev, struct sk_buff *skb,
+-				void *accel_priv, select_queue_fallback_t fallback)
++				struct net_device *sb_dev)
+ {
+ 	skb->priority = _cfg80211_classify8021d(skb);
+ 
+@@ -1603,12 +1603,14 @@
+ 
+ 
+ 	/* <1.2> Create wiphy */
+-	prWiphy = wiphy_new_nm(&mtk_wlan_ops, sizeof(GLUE_INFO_T), "mtkphy0");
++	prWiphy = wiphy_new(&mtk_wlan_ops, sizeof(GLUE_INFO_T));
+ 	if (!prWiphy) {
+ 		DBGLOG(INIT, ERROR, "Allocating memory to wiphy device failed\n");
+ 		goto free_wdev;
+ 	}
+ 
++	kalMemZero(wiphy_priv(prWiphy), sizeof(GLUE_INFO_T));
++
+ 	/* <1.3> configure wireless_dev & wiphy */
+ 	prWdev->iftype = NL80211_IFTYPE_STATION;
+ 	prWiphy->max_scan_ssids   = 1;    /* FIXME: for combo scan */
+@@ -1617,6 +1619,7 @@
+ 	prWiphy->max_sched_scan_ssids	= CFG_SCAN_SSID_MAX_NUM;
+ 	prWiphy->max_match_sets		= CFG_SCAN_SSID_MATCH_MAX_NUM;
+ 	prWiphy->max_sched_scan_ie_len	= CFG_CFG80211_IE_BUF_LEN;
++	prWiphy->max_sched_scan_reqs = 1;
+ 
+ 	prWiphy->interface_modes	= BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_ADHOC);
+ 	prWiphy->bands[NL80211_BAND_2GHZ] = &mtk_band_2ghz;
+@@ -1628,7 +1631,6 @@
+ 	prWiphy->n_cipher_suites = ARRAY_SIZE(mtk_cipher_suites);
+ 	prWiphy->flags = WIPHY_FLAG_SUPPORTS_FW_ROAM
+ 			| WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL;
+-	prWiphy->max_sched_scan_reqs = 1;
+ 	prWiphy->regulatory_flags = REGULATORY_CUSTOM_REG;
+ #if CFG_SUPPORT_TDLS
+ 	TDLSEX_WIPHY_FLAGS_INIT(prWiphy->flags);
+@@ -1697,8 +1699,8 @@
+ 	}
+ #endif /* CFG_SUPPORT_PERSIST_NETDEV */
+ 	gprWdev = prWdev;
+-	DBGLOG(INIT, INFO, "create wireless device success\n");
+ 	glP2pCreateWirelessDevice((P_GLUE_INFO_T) wiphy_priv(prWiphy));
++	DBGLOG(INIT, INFO, "create wireless device success\n");
+ 	return;
+ 
+ #if CFG_SUPPORT_PERSIST_NETDEV
+@@ -3406,9 +3408,9 @@
+ 	DBGLOG(INIT, LOUD, "wlanUnregisterNotifier...\n");
+ 	wlanUnregisterNotifier();
+ 
+-	DBGLOG(INIT, INFO, "wlanRemove ok\n");
+-
+ 	destroyWirelessDevice();
++
++	DBGLOG(INIT, INFO, "wlanRemove ok\n");
+ }				/* end of wlanRemove() */
+ 
+ /*----------------------------------------------------------------------------*/
+@@ -3477,6 +3479,7 @@
+ #if CFG_CHIP_RESET_SUPPORT
+ 	glResetUninit();
+ #endif
++
+ 	glUnregisterBus(wlanRemove);
+ 
+ 	/* free pre-allocated memory */
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_kal.c mt6625-kernel/os/linux/gl_kal.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_kal.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/gl_kal.c	2020-03-24 22:25:48.757205235 +0800
+@@ -944,7 +944,7 @@
+ 		goto error_read;
+ 	} else {
+ 		filp->f_pos = u4Offset;
+-		*pu4Size = vfs_read(filp, prBuf, *pu4Size, &filp->f_pos);
++		*pu4Size = kernel_read(filp, prBuf, *pu4Size, &filp->f_pos);
+ 	}
+ #endif
+ 
+@@ -1281,7 +1281,7 @@
+ 		else if (aeCSUM[CSUM_TYPE_UDP] == CSUM_RES_FAILED)
+ 			DBGLOG(RX, TRACE, "RX: \"bad UDP Checksum\" Packet\n");
+ 		else
+-			/* Do nothing */
++			/* Do nothing */;
+ #endif
+ 	}
+ 
+@@ -3331,9 +3331,7 @@
+ 
+ 	ASSERT(prGlueInfo);
+ 
+-	init_timer(&(prGlueInfo->tickfn));
+-	prGlueInfo->tickfn.function = prTimerHandler;
+-	prGlueInfo->tickfn.data = (ULONG) prGlueInfo;
++	timer_setup(&(prGlueInfo->tickfn), prTimerHandler, 0);
+ }
+ 
+ /* Todo */
+@@ -3434,10 +3432,10 @@
+  * \retval (none)
+  */
+ /*----------------------------------------------------------------------------*/
+-VOID kalTimeoutHandler(ULONG arg)
++VOID kalTimeoutHandler(struct timer_list *t)
+ {
+ 
+-	P_GLUE_INFO_T prGlueInfo = (P_GLUE_INFO_T) arg;
++	P_GLUE_INFO_T prGlueInfo = from_timer(prGlueInfo, t, tickfn);
+ 
+ 	ASSERT(prGlueInfo);
+ 
+@@ -3847,7 +3845,7 @@
+ 	oldfs = get_fs();
+ 	set_fs(get_ds());
+ 
+-	ret = vfs_read(file, data, size, &offset);
++	ret = kernel_read(file, data, size, &offset);
+ 
+ 	set_fs(oldfs);
+ 	return ret;
+@@ -3861,7 +3859,7 @@
+ 	oldfs = get_fs();
+ 	set_fs(get_ds());
+ 
+-	ret = vfs_write(file, data, size, &offset);
++	ret = kernel_write(file, data, size, &offset);
+ 
+ 	set_fs(oldfs);
+ 	return ret;
+@@ -4527,13 +4525,24 @@
+ 
+ 			wlanExportGlueInfo(&prGlueInfo);
+ 
++#ifdef MTK_WCN_BUILT_IN_DRIVER
+ 			DBGLOG(INIT, ERROR,
+ 				"kalIoctl was executed longer than %u ms, show backtrace of tx_thread!\n",
+ 				kalGetTimeTick() - rHaltCtrl.u4HoldStart);
++			if (prGlueInfo)
++				show_stack(prGlueInfo->main_thread, NULL);
++#else
++			DBGLOG(INIT, ERROR,
++				"kalIoctl was executed longer than %u ms!\n",
++				kalGetTimeTick() - rHaltCtrl.u4HoldStart);
++#endif
+ 		} else {
+ 			DBGLOG(INIT, ERROR, "halt lock held by %s pid %d longer than %u ms!\n",
+ 				rHaltCtrl.owner->comm, rHaltCtrl.owner->pid,
+ 				kalGetTimeTick() - rHaltCtrl.u4HoldStart);
++#ifdef MTK_WCN_BUILT_IN_DRIVER
++			show_stack(rHaltCtrl.owner, NULL);
++#endif
+ 		}
+ 		return i4Ret;
+ 	}
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_p2p.c mt6625-kernel/os/linux/gl_p2p.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_p2p.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/gl_p2p.c	2020-03-24 22:25:48.757205235 +0800
+@@ -637,18 +637,18 @@
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = WIFI_SUBCMD_GET_CHANNEL_LIST
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_get_channel_list
++		.doit = mtk_cfg80211_vendor_get_channel_list,
++		.policy = wifi_vendor_test_policy
+ 	},
+ 	{
+ 		{
+ 			.vendor_id = GOOGLE_OUI,
+ 			.subcmd = WIFI_SUBCMD_SET_COUNTRY_CODE
+ 		},
+-		.policy = VENDOR_CMD_RAW_DATA,
+ 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+-		.doit = mtk_cfg80211_vendor_set_country_code
++		.doit = mtk_cfg80211_vendor_set_country_code,
++		.policy = wifi_vendor_test_policy
+ 	},
+ };
+ 
+@@ -879,7 +879,7 @@
+ static const UINT_16 au16Wlan1dToQueueIdx[8] = { 1, 0, 0, 1, 2, 2, 3, 3 };
+ 
+ static UINT_16 p2pSelectQueue(struct net_device *dev, struct sk_buff *skb,
+-				void *accel_priv, select_queue_fallback_t fallback)
++				struct net_device *sb_dev)
+ {
+ 	skb->priority = _p2p_cfg80211_classify8021d(skb);
+ 
+@@ -1172,7 +1172,7 @@
+ 		return FALSE;
+ 	}
+ 	/* 1. allocate WIPHY */
+-	prWiphy = wiphy_new_nm(&mtk_p2p_ops, sizeof(P_GLUE_INFO_T), "mtkp2p0");
++	prWiphy = wiphy_new(&mtk_p2p_ops, sizeof(P_GLUE_INFO_T));
+ 	if (!prWiphy) {
+ 		DBGLOG(P2P, ERROR, "unable to allocate wiphy for p2p\n");
+ 		goto free_wdev;
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_p2p_cfg80211.c mt6625-kernel/os/linux/gl_p2p_cfg80211.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_p2p_cfg80211.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/gl_p2p_cfg80211.c	2020-03-24 22:25:48.757205235 +0800
+@@ -1288,6 +1288,7 @@
+ 		switch (type) {
+ 		case NL80211_IFTYPE_P2P_CLIENT:
+ 			DBGLOG(P2P, TRACE, "NL80211_IFTYPE_P2P_CLIENT.\n");
++			/* FALLTHRU */
+ 		case NL80211_IFTYPE_STATION:
+ 			if (type == NL80211_IFTYPE_STATION)
+ 				DBGLOG(P2P, TRACE, "NL80211_IFTYPE_STATION.\n");
+@@ -1295,6 +1296,7 @@
+ 			break;
+ 		case NL80211_IFTYPE_AP:
+ 			DBGLOG(P2P, TRACE, "NL80211_IFTYPE_AP.\n");
++			/* FALLTHRU */
+ 		case NL80211_IFTYPE_P2P_GO:
+ 			if (type == NL80211_IFTYPE_P2P_GO)
+ 				DBGLOG(P2P, TRACE, "NL80211_IFTYPE_P2P_GO not AP.\n");
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_proc.c mt6625-kernel/os/linux/gl_proc.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_proc.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/gl_proc.c	2020-03-24 22:25:48.757205235 +0800
+@@ -65,7 +65,7 @@
+ #include "precomp.h"
+ 
+ /* #include "wlan_lib.h" */
+-/* #include "mtk_debug.h" */
++/* #include "debug.h" */
+ 
+ /*******************************************************************************
+ *                              C O N S T A N T S
+@@ -963,9 +963,10 @@
+ 
+ INT_32 procUninitProcFs(VOID)
+ {
++	remove_proc_entry(PROC_AUTO_PER_CFG, gprProcRoot);
++	remove_proc_entry(PROC_NEED_TX_DONE, gprProcRoot);
+ 	remove_proc_entry(PROC_DBG_LEVEL_NAME, gprProcRoot);
+ 	remove_proc_subtree(PROC_ROOT_NAME, init_net.proc_net);
+-	remove_proc_entry(PROC_AUTO_PER_CFG, gprProcRoot);
+ 	return 0;
+ }
+ 
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_wext_priv.c mt6625-kernel/os/linux/gl_wext_priv.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/gl_wext_priv.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/gl_wext_priv.c	2020-03-24 22:25:48.757205235 +0800
+@@ -865,7 +865,7 @@
+ 	UINT_32 i4GetCh = 0;
+ 	INT_32 i4Argc = 0;
+ 	PCHAR apcArgv[WLAN_CFG_ARGV_MAX] = { 0 };
+-	UINT_8 ucTextLen = 40;
++	#define ucTextLen 40
+ 	UCHAR text[ucTextLen];
+ 	INT_32 u4Ret;
+ 
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/hif/ahb/ahb.c mt6625-kernel/os/linux/hif/ahb/ahb.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/hif/ahb/ahb.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/hif/ahb/ahb.c	2020-03-24 22:25:48.757205235 +0800
+@@ -308,7 +308,7 @@
+ };
+ #endif
+ 
+-struct platform_driver MtkPltmAhbDriver = {
++struct platform_driver MtkPltmAhb_driver = {
+ 	.driver = {
+ 	.name = "mt-wifi",
+ 	.owner = THIS_MODULE,
+@@ -362,7 +362,7 @@
+ 		return Ret;
+ 	HifAhbProbe();
+ #else
+-	Ret = platform_driver_register(&MtkPltmAhbDriver);
++	Ret = platform_driver_register(&MtkPltmAhb_driver);
+ #endif /* CONF_HIF_DEV_MISC */
+ 
+ 	return Ret;
+@@ -391,7 +391,7 @@
+ 		;
+ #else
+ 
+-	platform_driver_unregister(&MtkPltmAhbDriver);
++	platform_driver_unregister(&MtkPltmAhb_driver);
+ #endif /* CONF_HIF_DEV_MISC */
+ 
+ 	return;
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/include/gl_kal.h mt6625-kernel/os/linux/include/gl_kal.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/include/gl_kal.h	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/include/gl_kal.h	2020-03-24 22:25:48.757205235 +0800
+@@ -643,11 +643,7 @@
+ 	MEM_TYPE_NUM
+ } ENUM_KAL_MEM_ALLOCATION_TYPE;
+ 
+-#if CONFIG_ANDROID		/* Defined in Android kernel source */
+-typedef struct wake_lock KAL_WAKE_LOCK_T, *P_KAL_WAKE_LOCK_T;
+-#else
+-typedef UINT_32 KAL_WAKE_LOCK_T, *P_KAL_WAKE_LOCK_T;
+-#endif
++typedef struct wakeup_source *KAL_WAKE_LOCK_T, **P_KAL_WAKE_LOCK_T;
+ 
+ #if CFG_SUPPORT_AGPS_ASSIST
+ typedef enum _ENUM_MTK_AGPS_ATTR {
+@@ -723,29 +719,26 @@
+ /*----------------------------------------------------------------------------*/
+ /* Macros of wake_lock operations for using in Driver Layer                   */
+ /*----------------------------------------------------------------------------*/
+-#if CONFIG_ANDROID		/* Defined in Android kernel source */
+ #define KAL_WAKE_LOCK_INIT(_prAdapter, _prWakeLock, _pcName) \
+-	wake_lock_init(_prWakeLock, WAKE_LOCK_SUSPEND, _pcName)
++	do { \
++		if( (*(_prWakeLock) = wakeup_source_create(_pcName)) ) \
++			wakeup_source_add(*(_prWakeLock)); \
++	} while (0)
+ 
+ #define KAL_WAKE_LOCK_DESTROY(_prAdapter, _prWakeLock) \
+-	wake_lock_destroy(_prWakeLock)
++	do { \
++		wakeup_source_remove(*(_prWakeLock)); \
++		wakeup_source_destroy(*(_prWakeLock)); \
++	} while (0)
+ 
+ #define KAL_WAKE_LOCK(_prAdapter, _prWakeLock) \
+-	wake_lock(_prWakeLock)
++	__pm_stay_awake(*(_prWakeLock))
+ 
+ #define KAL_WAKE_LOCK_TIMEOUT(_prAdapter, _prWakeLock, _u4Timeout) \
+-	wake_lock_timeout(_prWakeLock, _u4Timeout)
++	__pm_wakeup_event(*(_prWakeLock), jiffies_to_msecs(_u4Timeout))
+ 
+ #define KAL_WAKE_UNLOCK(_prAdapter, _prWakeLock) \
+-	wake_unlock(_prWakeLock)
+-
+-#else
+-#define KAL_WAKE_LOCK_INIT(_prAdapter, _prWakeLock, _pcName)
+-#define KAL_WAKE_LOCK_DESTROY(_prAdapter, _prWakeLock)
+-#define KAL_WAKE_LOCK(_prAdapter, _prWakeLock)
+-#define KAL_WAKE_LOCK_TIMEOUT(_prAdapter, _prWakeLock, _u4Timeout)
+-#define KAL_WAKE_UNLOCK(_prAdapter, _prWakeLock)
+-#endif
++	__pm_relax(*(_prWakeLock))
+ 
+ /*----------------------------------------------------------------------------*/
+ /*!
+@@ -852,7 +845,7 @@
+ 
+ /* string operation */
+ #define kalStrCpy(dest, src)                         strcpy(dest, src)
+-#define kalStrnCpy(dest, src, n)                      strncpy(dest, src, n)
++#define kalStrnCpy(dest, src, n)                      memcpy(dest, src, n)
+ #define kalStrCmp(ct, cs)                            strcmp(ct, cs)
+ #define kalStrnCmp(ct, cs, n)                         strncmp(ct, cs, n)
+ #define kalStrChr(s, c)                              strchr(s, c)
+@@ -1450,7 +1443,7 @@
+ 
+ UINT_32 kalRandomNumber(VOID);
+ 
+-VOID kalTimeoutHandler(ULONG arg);
++VOID kalTimeoutHandler(struct timer_list *t);
+ 
+ VOID kalSetEvent(P_GLUE_INFO_T pr);
+ 
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/include/gl_os.h mt6625-kernel/os/linux/include/gl_os.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/include/gl_os.h	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/include/gl_os.h	2020-03-24 22:25:48.757205235 +0800
+@@ -517,11 +517,6 @@
+ 
+ #define DRV_NAME "["CHIP_NAME"]: "
+ 
+-#define CONFIG_ANDROID 1
+-/* Define if target platform is Android.
+- * It should already be defined in Android kernel source
+- */
+-
+ /* for CFG80211 IE buffering mechanism */
+ #define CFG_CFG80211_IE_BUF_LEN     (512)
+ 
+@@ -537,10 +532,6 @@
+ #include <linux/jiffies.h>	/* jiffies */
+ #include <linux/delay.h>	/* udelay and mdelay macro */
+ 
+-#if CONFIG_ANDROID
+-#include <linux/wakelock.h>
+-#endif
+-
+ #include <linux/irq.h>		/* IRQT_FALLING */
+ 
+ #include <linux/netdevice.h>	/* struct net_device, struct net_device_stats */
+@@ -609,7 +600,7 @@
+ #if (CFG_SUPPORT_TDLS == 1)
+ #include "tdls_extr.h"
+ #endif
+-#include "mtk_debug.h"
++#include "debug.h"
+ 
+ #include "wlan_lib.h"
+ #include "wlan_oid.h"
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/include/gl_vendor.h mt6625-kernel/os/linux/include/gl_vendor.h
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/include/gl_vendor.h	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/include/gl_vendor.h	2020-03-24 22:25:48.757205235 +0800
+@@ -86,9 +86,19 @@
+ 	WIFI_SUBCMD_NODFS_SET,                           /* 0x0004 */
+ 	WIFI_SUBCMD_SET_COUNTRY_CODE,                    /* 0x0005 */
+ 	/* Add more sub commands here */
+-
++	WIFI_SUBCMD_MAX
+ } WIFI_SUB_COMMAND;
+ 
++static const struct nla_policy
++wifi_vendor_test_policy[WIFI_SUBCMD_MAX + 1] = {
++	[WIFI_SUBCMD_GET_CHANNEL_LIST] = { .type = NLA_U32 },
++	[WIFI_SUBCMD_GET_FEATURE_SET] = { .type = NLA_U32 },
++	[WIFI_SUBCMD_GET_FEATURE_SET_MATRIX] = { .type = NLA_U32 },
++	[WIFI_SUBCMD_SET_PNO_RANDOM_MAC_OUI] = { .type = NLA_U32 },
++	[WIFI_SUBCMD_NODFS_SET] = { .type = NLA_U32 },
++	[WIFI_SUBCMD_SET_COUNTRY_CODE] = { .type = NLA_U32 },
++};
++
+ typedef enum {
+ 	GSCAN_SUBCMD_GET_CAPABILITIES = ANDROID_NL80211_SUBCMD_GSCAN_RANGE_START,
+ 
+@@ -103,19 +113,46 @@
+ 	GSCAN_SUBCMD_SET_SIGNIFICANT_CHANGE_CONFIG,       /* 0x1007 */
+ 	GSCAN_SUBCMD_ENABLE_FULL_SCAN_RESULTS,            /* 0x1008 */
+ 	/* Add more sub commands here */
+-
++	GSCAN_SUBCMD_MAX
+ } GSCAN_SUB_COMMAND;
+ 
++static const struct nla_policy
++gscan_vendor_test_policy[GSCAN_SUBCMD_MAX + 1] = {
++	[GSCAN_SUBCMD_GET_CAPABILITIES] = { .type = NLA_U32 },
++	[GSCAN_SUBCMD_SET_CONFIG] = { .type = NLA_U32 },
++	[GSCAN_SUBCMD_SET_SCAN_CONFIG] = { .type = NLA_U32 },
++	[GSCAN_SUBCMD_ENABLE_GSCAN] = { .type = NLA_U32 },
++	[GSCAN_SUBCMD_GET_SCAN_RESULTS] = { .type = NLA_U32 },
++	[GSCAN_SUBCMD_SCAN_RESULTS] = { .type = NLA_U32 },
++	[GSCAN_SUBCMD_SET_HOTLIST] = { .type = NLA_U32 },
++	[GSCAN_SUBCMD_SET_SIGNIFICANT_CHANGE_CONFIG] = { .type = NLA_U32 },
++	[GSCAN_SUBCMD_ENABLE_FULL_SCAN_RESULTS] = { .type = NLA_U32 },
++};
++
+ typedef enum {
+ 	RTT_SUBCMD_SET_CONFIG = ANDROID_NL80211_SUBCMD_RTT_RANGE_START,
+ 	RTT_SUBCMD_CANCEL_CONFIG,
+ 	RTT_SUBCMD_GETCAPABILITY,
++	RTT_SUBCMD_MAX
+ } RTT_SUB_COMMAND;
+ 
++static const struct nla_policy
++rtt_vendor_test_policy[RTT_SUBCMD_MAX + 1] = {
++	[RTT_SUBCMD_SET_CONFIG] = { .type = NLA_U32 },
++	[RTT_SUBCMD_CANCEL_CONFIG] = { .type = NLA_U32 },
++	[RTT_SUBCMD_GETCAPABILITY] = { .type = NLA_U32 },
++};
++
+ typedef enum {
+ 	LSTATS_SUBCMD_GET_INFO = ANDROID_NL80211_SUBCMD_LSTATS_RANGE_START,
++	LSTATS_SUBCMD_MAX
+ } LSTATS_SUB_COMMAND;
+ 
++static const struct nla_policy
++lstats_vendor_test_policy[LSTATS_SUBCMD_MAX + 1] = {
++	[LSTATS_SUBCMD_GET_INFO] = { .type = NLA_U32 },
++};
++
+ typedef enum {
+ 	GSCAN_EVENT_SIGNIFICANT_CHANGE_RESULTS,
+ 	GSCAN_EVENT_HOTLIST_RESULTS_FOUND,
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/platform.c mt6625-kernel/os/linux/platform.c
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/os/linux/platform.c	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/os/linux/platform.c	2020-03-24 22:25:48.757205235 +0800
+@@ -314,7 +314,7 @@
+ 		/* because we store the address of prGlueInfo in p2p's private date of net device */
+ 		/* *((P_GLUE_INFO_T *) netdev_priv(prGlueInfo->prP2PInfo->prDevHandler)) = prGlueInfo; */
+ 		prGlueInfo = *((P_GLUE_INFO_T *) netdev_priv(prDev));
+-	} else {		/* wlan0 */
++	} else {		/* mtkwlan0 */
+ 		prGlueInfo = (P_GLUE_INFO_T) netdev_priv(prDev);
+ 	}
+ 
+@@ -410,7 +410,7 @@
+ 			}
+ 		}
+ 
+-		retLen = vfs_read(fd, buf, len, &fd->f_pos);
++		retLen = kernel_read(fd, buf, len, &fd->f_pos);
+ 
+ 	} while (FALSE);
+ 
+@@ -474,7 +474,7 @@
+ 			}
+ 		}
+ 
+-		retLen = vfs_write(fd, buf, len, &fd->f_pos);
++		retLen = kernel_write(fd, buf, len, &fd->f_pos);
+ 
+ 	} while (FALSE);
+ 
+diff -ruN mt6625l-wlan-gen2-2019-09-01-5a8fafb8/README.md mt6625-kernel/README.md
+--- mt6625l-wlan-gen2-2019-09-01-5a8fafb8/README.md	2019-09-01 17:44:07.000000000 +0800
++++ mt6625-kernel/README.md	1970-01-01 08:00:00.000000000 +0800
+@@ -1,2 +0,0 @@
+-# mt66xx-wmt-wifi
+-Stand-alone Mediatek mt66xx wlan_gen2 driver

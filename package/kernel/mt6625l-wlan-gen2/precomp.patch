@@ -1,0 +1,57 @@
+--- a/include/precomp.h	2020-03-15 17:07:44.014312264 +0800
++++ b/include/precomp.h	2020-03-15 17:07:54.154450323 +0800
+@@ -258,7 +258,7 @@
+ #include "rlm_domain.h"
+ #include "rlm_protection.h"
+ #include "rlm_obss.h"
+-#include "rate.h"
++#include_next "rate.h"
+ #if CFG_SUPPORT_802_11V
+ #include "wnm.h"
+ #endif
+--- a/Makefile	2020-03-21 16:42:54.414530374 +0800
++++ b/Makefile	2020-03-21 16:44:13.770913320 +0800
+@@ -102,8 +102,8 @@ ccflags-y += -DDBG=0
+ #ccflags-y += -DDBG=1
+ # ----------------------------------------------------
+ 
+-ccflags-y += -I$(srctree)/$(src)/os -I$(srctree)/$(src)/os/linux/include -I$(srctree)/$(src)/os/linux/hif/ahb/include
+-ccflags-y += -I$(srctree)/$(src)/include -I$(srctree)/$(src)/include/nic -I$(srctree)/$(src)/include/mgmt
++ccflags-y += -I$(src)/os -I$(src)/os/linux/include -I$(src)/os/linux/hif/ahb/include
++ccflags-y += -I$(src)/include -I$(src)/include/nic -I$(src)/include/mgmt
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/
+ 
+--- a/os/linux/platform.c	2020-03-15 17:11:11.421149121 +0800
++++ b/os/linux/platform.c	2020-03-15 17:11:25.961211434 +0800
+@@ -106,7 +106,7 @@
+ #include <linux/types.h>
+ #include <linux/module.h>
+ #include <linux/fs.h>
+-
++#include "precomp.h"
+ #include <linux/uaccess.h>
+ 
+ #include "gl_os.h"
+--- a/os/linux/hif/ahb/ahb.c	2020-03-15 17:13:36.005867590 +0800
++++ b/os/linux/hif/ahb/ahb.c	2020-03-15 17:13:53.301972174 +0800
+@@ -148,7 +148,7 @@
+ /* #include <linux/fs.h> */
+ /* #include <linux/cdev.h> */
+ /* #include <linux/poll.h> */
+-
++#include "precomp.h"
+ #include <linux/mm.h>
+ #ifndef CONFIG_X86
+ #include <asm/memory.h>
+--- a/os/linux/hif/ahb/mt8127/ahb_pdma.c	2020-03-15 17:15:00.734413617 +0800
++++ b/os/linux/hif/ahb/mt8127/ahb_pdma.c	2020-03-15 17:15:25.202586146 +0800
+@@ -31,7 +31,7 @@
+ #define MODULE_AHB_DMA
+ 
+ #include <linux/version.h>	/* constant of kernel version */
+-
++#include "precomp.h"
+ #include <linux/kernel.h>	/* bitops.h */
+ 
+ #include <linux/timer.h>	/* struct timer_list */
