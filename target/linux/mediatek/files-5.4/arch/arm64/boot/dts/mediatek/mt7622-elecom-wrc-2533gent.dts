@@ -605,8 +605,9 @@
 	pinctrl-0 = <&watchdog_pins>;
 	status = "okay";
 };
-
+/*
 &wmac {
 	mediatek,mtd-eeprom = <&factory 0x0000>;
 	status = "okay";
 };
+*/
