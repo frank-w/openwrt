@@ -522,6 +522,43 @@ define Trusted-Firmware-A/mt7988-spim-nand-ubi-comb
   USE_UBI:=1
 endef
 
+define Trusted-Firmware-A/mt7988-spim-nand-ubi-ddr4
+  NAME:=MediaTek MT7988 (SPI-NAND via SPIM, DDR4)
+  BOOT_DEVICE:=spim-nand
+  BUILD_SUBTARGET:=filogic
+  PLAT:=mt7988
+  DDR_TYPE:=ddr4
+  USE_UBI:=1
+endef
+
+define Trusted-Firmware-A/mt7988-emmc-comb-8g
+  NAME:=MediaTek MT7988 (eMMC)
+  BOOT_DEVICE:=emmc
+  BUILD_SUBTARGET:=filogic
+  PLAT:=mt7988
+  DRAM_USE_COMB:=1
+  DDR4_4BG_MODE:=1
+endef
+
+define Trusted-Firmware-A/mt7988-sdmmc-comb-8g
+  NAME:=MediaTek MT7988 (SD card)
+  BOOT_DEVICE:=sdmmc
+  BUILD_SUBTARGET:=filogic
+  PLAT:=mt7988
+  DRAM_USE_COMB:=1
+  DDR4_4BG_MODE:=1
+endef
+
+define Trusted-Firmware-A/mt7988-spim-nand-ubi-comb-8g
+  NAME:=MediaTek MT7988 (SPI-NAND via SPIM, UBI)
+  BOOT_DEVICE:=spim-nand
+  BUILD_SUBTARGET:=filogic
+  PLAT:=mt7988
+  DRAM_USE_COMB:=1
+  DDR4_4BG_MODE:=1
+  USE_UBI:=1
+endef
+
 TFA_TARGETS:= \
 	mt7622-nor-1ddr \
 	mt7622-nor-2ddr \
@@ -579,7 +616,11 @@ TFA_TARGETS:= \
 	mt7988-snand-comb \
 	mt7988-snand-ubi-comb \
 	mt7988-spim-nand-comb \
-	mt7988-spim-nand-ubi-comb
+	mt7988-spim-nand-ubi-comb \
+	mt7988-spim-nand-ubi-ddr4 \
+	mt7988-emmc-comb-8g \
+	mt7988-sdmmc-comb-8g \
+	mt7988-spim-nand-ubi-comb-8g
 
 TFA_MAKE_FLAGS += \
 	BOOT_DEVICE=$(BOOT_DEVICE) \
@@ -590,6 +631,7 @@ TFA_MAKE_FLAGS += \
 	HAVE_DRAM_OBJ_FILE=yes \
 	$(if $(DDR3_FLYBY),DDR3_FLYBY=1) \
 	$(if $(DRAM_USE_COMB),DRAM_USE_COMB=1) \
+	$(if $(DDR4_4BG_MODE),DDR4_4BG_MODE=1) \
 	$(if $(RAM_BOOT_UART_DL),RAM_BOOT_UART_DL=1) \
 	$(if $(USE_UBI),UBI=1 $(if $(findstring mt7622,$(PLAT)),OVERRIDE_UBI_START_ADDR=0x80000)) \
 	$(if $(USE_UBI),UBI=1 $(if $(findstring mt7981,$(PLAT)),OVERRIDE_UBI_START_ADDR=0x100000)) \
