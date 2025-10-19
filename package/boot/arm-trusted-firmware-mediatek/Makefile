@@ -33,6 +33,7 @@ define Trusted-Firmware-A/Default
   NAND_TYPE:=
   BOARD_QFN:=
   DRAM_USE_COMB:=
+  DDR4_4BG_MODE:=
   RAM_BOOT_UART_DL:=
   USE_UBI:=
   FIP_OFFSET:=

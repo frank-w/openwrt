@@ -458,19 +458,19 @@ define Device/bananapi_bpi-r4-common
 	       emmc-preloader.bin emmc-bl31-uboot.fip \
 	       sdcard.img.gz \
 	       snand-preloader.bin snand-bl31-uboot.fip
-  ARTIFACT/emmc-preloader.bin	:= mt7988-bl2 emmc-comb-8g
+  ARTIFACT/emmc-preloader.bin	:= mt7988-bl2 emmc-$$(DEVICE_BL2)
   ARTIFACT/emmc-bl31-uboot.fip	:= mt7988-bl31-uboot $$(DEVICE_NAME)-emmc
-  ARTIFACT/snand-preloader.bin	:= mt7988-bl2 spim-nand-ubi-comb-8g
+  ARTIFACT/snand-preloader.bin	:= mt7988-bl2 spim-nand-ubi-$$(DEVICE_BL2)
   ARTIFACT/snand-bl31-uboot.fip	:= mt7988-bl31-uboot $$(DEVICE_NAME)-snand
   ARTIFACT/sdcard.img.gz	:= mt798x-gpt sdmmc |\
-				   pad-to 17k | mt7988-bl2 sdmmc-comb-8g |\
+				   pad-to 17k | mt7988-bl2 sdmmc-$$(DEVICE_BL2) |\
 				   pad-to 6656k | mt7988-bl31-uboot $$(DEVICE_NAME)-sdmmc |\
 				$(if $(CONFIG_TARGET_ROOTFS_INITRAMFS),\
 				   pad-to 12M | append-image-stage initramfs-recovery.itb | check-size 44m |\
 				) \
-				   pad-to 44M | mt7988-bl2 spim-nand-ubi-comb-8g |\
+				   pad-to 44M | mt7988-bl2 spim-nand-ubi-$$(DEVICE_BL2) |\
 				   pad-to 45M | mt7988-bl31-uboot $$(DEVICE_NAME)-snand |\
-				   pad-to 51M | mt7988-bl2 emmc-comb-8g |\
+				   pad-to 51M | mt7988-bl2 emmc-$$(DEVICE_BL2) |\
 				   pad-to 52M | mt7988-bl31-uboot $$(DEVICE_NAME)-emmc |\
 				   pad-to 56M | mt798x-gpt emmc |\
 				$(if $(CONFIG_TARGET_ROOTFS_SQUASHFS),\
@@ -488,6 +488,7 @@ define Device/bananapi_bpi-r4
   DEVICE_MODEL := BPi-R4
   DEVICE_DTS := mt7988a-bananapi-bpi-r4
   DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4
+  DEVICE_BL2 := comb
   $(call Device/bananapi_bpi-r4-common)
 endef
 TARGET_DEVICES += bananapi_bpi-r4
@@ -496,10 +497,30 @@ define Device/bananapi_bpi-r4-poe
   DEVICE_MODEL := BPi-R4 2.5GE
   DEVICE_DTS := mt7988a-bananapi-bpi-r4-poe
   DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4-poe
+  DEVICE_BL2 := comb
   $(call Device/bananapi_bpi-r4-common)
   DEVICE_PACKAGES += mt7988-2p5g-phy-firmware
 endef
 TARGET_DEVICES += bananapi_bpi-r4-poe
+
+define Device/bananapi_bpi-r4-8g
+  DEVICE_MODEL := BPi-R4 8G
+  DEVICE_DTS := mt7988a-bananapi-bpi-r4
+  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4
+  DEVICE_BL2 := comb-8g
+  $(call Device/bananapi_bpi-r4-common)
+endef
+TARGET_DEVICES += bananapi_bpi-r4-8g
+
+define Device/bananapi_bpi-r4-poe-8g
+  DEVICE_MODEL := BPi-R4 2.5GE 8G
+  DEVICE_DTS := mt7988a-bananapi-bpi-r4-poe
+  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4-poe
+  DEVICE_BL2 := comb-8g
+  $(call Device/bananapi_bpi-r4-common)
+  DEVICE_PACKAGES += mt7988-2p5g-phy-firmware
+endef
+TARGET_DEVICES += bananapi_bpi-r4-poe-8g
 
 define Device/cetron_ct3003
   DEVICE_VENDOR := Cetron
