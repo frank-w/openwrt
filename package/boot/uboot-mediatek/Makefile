@@ -785,6 +785,78 @@ define U-Boot/mt7988_bananapi_bpi-r4-poe-snand
   DEPENDS:=+trusted-firmware-a-mt7988-spim-nand-ubi-comb
 endef
 
+define U-Boot/mt7988_bananapi_bpi-r4-8g-emmc
+  NAME:=BananaPi BPi-R4 8G
+  BUILD_SUBTARGET:=filogic
+  BUILD_DEVICES:=bananapi_bpi-r4-8g
+  UBOOT_CONFIG:=mt7988a_bananapi_bpi-r4-emmc
+  UBOOT_IMAGE:=u-boot.fip
+  BL2_BOOTDEV:=emmc
+  BL2_SOC:=mt7988
+  BL2_DDRTYPE:=comb-8g
+  DEPENDS:=+trusted-firmware-a-mt7988-emmc-comb-8g
+endef
+
+define U-Boot/mt7988_bananapi_bpi-r4-8g-sdmmc
+  NAME:=BananaPi BPi-R4 8G
+  BUILD_SUBTARGET:=filogic
+  BUILD_DEVICES:=bananapi_bpi-r4-8g
+  UBOOT_CONFIG:=mt7988a_bananapi_bpi-r4-sdmmc
+  UBOOT_IMAGE:=u-boot.fip
+  BL2_BOOTDEV:=sdmmc
+  BL2_SOC:=mt7988
+  BL2_DDRTYPE:=comb-8g
+  DEPENDS:=+trusted-firmware-a-mt7988-sdmmc-comb-8g
+endef
+
+define U-Boot/mt7988_bananapi_bpi-r4-8g-snand
+  NAME:=BananaPi BPi-R4 8G
+  BUILD_SUBTARGET:=filogic
+  BUILD_DEVICES:=bananapi_bpi-r4-8g
+  UBOOT_CONFIG:=mt7988a_bananapi_bpi-r4-snand
+  UBOOT_IMAGE:=u-boot.fip
+  BL2_BOOTDEV:=spim-nand-ubi
+  BL2_SOC:=mt7988
+  BL2_DDRTYPE:=comb-8g
+  DEPENDS:=+trusted-firmware-a-mt7988-spim-nand-ubi-comb-8g
+endef
+
+define U-Boot/mt7988_bananapi_bpi-r4-poe-8g-emmc
+  NAME:=BananaPi BPi-R4 2.5GE 8G
+  BUILD_SUBTARGET:=filogic
+  BUILD_DEVICES:=bananapi_bpi-r4-poe-8g
+  UBOOT_CONFIG:=mt7988a_bananapi_bpi-r4-poe-emmc
+  UBOOT_IMAGE:=u-boot.fip
+  BL2_BOOTDEV:=emmc
+  BL2_SOC:=mt7988
+  BL2_DDRTYPE:=comb-8g
+  DEPENDS:=+trusted-firmware-a-mt7988-emmc-comb-8g
+endef
+
+define U-Boot/mt7988_bananapi_bpi-r4-poe-8g-sdmmc
+  NAME:=BananaPi BPi-R4 2.5GE 8G
+  BUILD_SUBTARGET:=filogic
+  BUILD_DEVICES:=bananapi_bpi-r4-poe-8g
+  UBOOT_CONFIG:=mt7988a_bananapi_bpi-r4-poe-sdmmc
+  UBOOT_IMAGE:=u-boot.fip
+  BL2_BOOTDEV:=sdmmc
+  BL2_SOC:=mt7988
+  BL2_DDRTYPE:=comb-8g
+  DEPENDS:=+trusted-firmware-a-mt7988-sdmmc-comb-8g
+endef
+
+define U-Boot/mt7988_bananapi_bpi-r4-poe-8g-snand
+  NAME:=BananaPi BPi-R4 2.5GE 8G
+  BUILD_SUBTARGET:=filogic
+  BUILD_DEVICES:=bananapi_bpi-r4-poe-8g
+  UBOOT_CONFIG:=mt7988a_bananapi_bpi-r4-poe-snand
+  UBOOT_IMAGE:=u-boot.fip
+  BL2_BOOTDEV:=spim-nand-ubi
+  BL2_SOC:=mt7988
+  BL2_DDRTYPE:=comb-8g
+  DEPENDS:=+trusted-firmware-a-mt7988-spim-nand-ubi-comb-8g
+endef
+
 define U-Boot/mt7988_rfb-spim-nand
   NAME:=MT7988 Reference Board
   BUILD_SUBTARGET:=filogic
@@ -913,6 +985,12 @@ UBOOT_TARGETS := \
 	mt7988_bananapi_bpi-r4-poe-emmc \
 	mt7988_bananapi_bpi-r4-poe-sdmmc \
 	mt7988_bananapi_bpi-r4-poe-snand \
+	mt7988_bananapi_bpi-r4-8g-emmc \
+	mt7988_bananapi_bpi-r4-8g-sdmmc \
+	mt7988_bananapi_bpi-r4-8g-snand \
+	mt7988_bananapi_bpi-r4-poe-8g-emmc \
+	mt7988_bananapi_bpi-r4-poe-8g-sdmmc \
+	mt7988_bananapi_bpi-r4-poe-8g-snand \
 	mt7988_rfb-spim-nand \
 	mt7988_rfb-snand \
 	mt7988_rfb-nor \
