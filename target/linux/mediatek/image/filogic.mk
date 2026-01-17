@@ -645,6 +645,7 @@ endef
 TARGET_DEVICES += bananapi_bpi-r3-mini
 
 define Build/bananapi_bpi-r4-sdcard-common
+  $(warning >>> Build/bpi-r4-sdcard $(1) $(2))
   mt798x-gpt sdmmc |\
 	   pad-to 17k | mt7988-bl2 sdmmc-comb$(1) |\
 	   pad-to 6656k | mt7988-bl31-uboot $$(DEVICE_NAME)-sdmmc |\
@@ -659,7 +660,7 @@ define Build/bananapi_bpi-r4-sdcard-common
 	$(if $(CONFIG_TARGET_ROOTFS_SQUASHFS),\
 	   pad-to 64M | append-image squashfs-sysupgrade.itb | check-size |\
 	) \
-	  gzip
+	  gzip > $@
 endef
 
 define Device/bananapi_bpi-r4-common
@@ -687,7 +688,7 @@ define Device/bananapi_bpi-r4-common
   ARTIFACT/snand-preloader-8g.bin	:= mt7988-bl2 spim-nand-ubi-comb-4bg
   ARTIFACT/snand-bl31-uboot.fip	:= mt7988-bl31-uboot $$(DEVICE_NAME)-snand
   ARTIFACT/sdcard.img.gz  := bananapi_bpi-r4-sdcard-common
-  ARTIFACT/sdcard-8g.img.gz := bananapi_bpi-r4-sdcard-common -4bg
+  ARTIFACT/sdcard-8g.img.gz := bananapi_bpi-r4-sdcard-common,-4bg
   IMAGE_SIZE := $$(shell expr 64 + $$(CONFIG_TARGET_ROOTFS_PARTSIZE))m
   KERNEL			:= kernel-bin | gzip
   KERNEL_INITRAMFS := kernel-bin | lzma | \
