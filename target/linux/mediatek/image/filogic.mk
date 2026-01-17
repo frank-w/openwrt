@@ -644,6 +644,24 @@ endif
 endef
 TARGET_DEVICES += bananapi_bpi-r3-mini
 
+define Build/bananapi_bpi-r4-sdcard-common
+  mt798x-gpt sdmmc |\
+	   pad-to 17k | mt7988-bl2 sdmmc-comb$(1) |\
+	   pad-to 6656k | mt7988-bl31-uboot $$(DEVICE_NAME)-sdmmc |\
+	$(if $(CONFIG_TARGET_ROOTFS_INITRAMFS),\
+	   pad-to 12M | append-image-stage initramfs-recovery.itb | check-size 44m |\
+	) \
+	   pad-to 44M | mt7988-bl2 spim-nand-ubi-comb$(1) |\
+	   pad-to 45M | mt7988-bl31-uboot $$(DEVICE_NAME)-snand |\
+	   pad-to 51M | mt7988-bl2 emmc-comb$(1) |\
+	   pad-to 52M | mt7988-bl31-uboot $$(DEVICE_NAME)-emmc |\
+	   pad-to 56M | mt798x-gpt emmc |\
+	$(if $(CONFIG_TARGET_ROOTFS_SQUASHFS),\
+	   pad-to 64M | append-image squashfs-sysupgrade.itb | check-size |\
+	) \
+	  gzip
+endef
+
 define Device/bananapi_bpi-r4-common
   DEVICE_VENDOR := Bananapi
   DEVICE_DTS_DIR := $(DTS_DIR)/
@@ -668,36 +686,8 @@ define Device/bananapi_bpi-r4-common
   ARTIFACT/snand-preloader.bin	:= mt7988-bl2 spim-nand-ubi-comb
   ARTIFACT/snand-preloader-8g.bin	:= mt7988-bl2 spim-nand-ubi-comb-4bg
   ARTIFACT/snand-bl31-uboot.fip	:= mt7988-bl31-uboot $$(DEVICE_NAME)-snand
-  ARTIFACT/sdcard.img.gz	:= mt798x-gpt sdmmc |\
-				   pad-to 17k | mt7988-bl2 sdmmc-comb |\
-				   pad-to 6656k | mt7988-bl31-uboot $$(DEVICE_NAME)-sdmmc |\
-				$(if $(CONFIG_TARGET_ROOTFS_INITRAMFS),\
-				   pad-to 12M | append-image-stage initramfs-recovery.itb | check-size 44m |\
-				) \
-				   pad-to 44M | mt7988-bl2 spim-nand-ubi-comb |\
-				   pad-to 45M | mt7988-bl31-uboot $$(DEVICE_NAME)-snand |\
-				   pad-to 51M | mt7988-bl2 emmc-comb |\
-				   pad-to 52M | mt7988-bl31-uboot $$(DEVICE_NAME)-emmc |\
-				   pad-to 56M | mt798x-gpt emmc |\
-				$(if $(CONFIG_TARGET_ROOTFS_SQUASHFS),\
-				   pad-to 64M | append-image squashfs-sysupgrade.itb | check-size |\
-				) \
-				  gzip
-  ARTIFACT/sdcard_8g.img.gz	:= mt798x-gpt sdmmc |\
-				   pad-to 17k | mt7988-bl2 sdmmc-comb-4bg |\
-				   pad-to 6656k | mt7988-bl31-uboot $$(DEVICE_NAME)-sdmmc |\
-				$(if $(CONFIG_TARGET_ROOTFS_INITRAMFS),\
-				   pad-to 12M | append-image-stage initramfs-recovery.itb | check-size 44m |\
-				) \
-				   pad-to 44M | mt7988-bl2 spim-nand-ubi-comb-4bg |\
-				   pad-to 45M | mt7988-bl31-uboot $$(DEVICE_NAME)-snand |\
-				   pad-to 51M | mt7988-bl2 emmc-comb-4bg |\
-				   pad-to 52M | mt7988-bl31-uboot $$(DEVICE_NAME)-emmc |\
-				   pad-to 56M | mt798x-gpt emmc |\
-				$(if $(CONFIG_TARGET_ROOTFS_SQUASHFS),\
-				   pad-to 64M | append-image squashfs-sysupgrade.itb | check-size |\
-				) \
-				  gzip
+  ARTIFACT/sdcard.img.gz  := bananapi_bpi-r4-sdcard-common
+  ARTIFACT/sdcard-8g.img.gz := bananapi_bpi-r4-sdcard-common -4bg
   IMAGE_SIZE := $$(shell expr 64 + $$(CONFIG_TARGET_ROOTFS_PARTSIZE))m
   KERNEL			:= kernel-bin | gzip
   KERNEL_INITRAMFS := kernel-bin | lzma | \
