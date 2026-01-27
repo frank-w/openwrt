@@ -1,0 +1,56 @@
+From: Chad Monroe <chad@monroe.io>
+Date: Thu, 27 Apr 2023 16:55:04 -0700
+Subject: [PATCH] net: phy: mxl: soft reset during probe 
+
+Some hardware platforms don't have a PHY reset line hooked
+up.. soft reset PHY during probe so it's in a known state.
+
+Signed-off-by: Chad Monroe <chad@monroe.io>
+---
+ drivers/net/phy/mxl-gpy.c |   19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+--- a/drivers/net/phy/mxl-gpy.c
++++ b/drivers/net/phy/mxl-gpy.c
+@@ -294,6 +294,21 @@ out:
+ 	return ret;
+ }
+ 
++static int gpy_soft_reset(struct phy_device *phydev)
++{
++	int ret;
++
++	phydev_info(phydev, "gpy_soft_reset: start VSPEC1_SGMII_CTRL=%04x\n",
++			phy_read_mmd(phydev, MDIO_MMD_VEND1, VSPEC1_SGMII_CTRL));
++
++	ret = genphy_soft_reset(phydev);
++
++	phydev_info(phydev, "gpy_soft_reset: complete ret=%d VSPEC1_SGMII_CTRL=%04x\n",
++			ret, phy_read_mmd(phydev, MDIO_MMD_VEND1, VSPEC1_SGMII_CTRL));
++
++	return ret;
++}
++
+ static int gpy_config_init(struct phy_device *phydev)
+ {
+ 	/* Nothing to configure. Configuration Requirement Placeholder */
+@@ -314,12 +329,19 @@ static int gpy_probe(struct phy_device *
+ 	struct gpy_priv *priv;
+ 	int fw_version;
+ 	int ret;
++	struct device_node *node = phydev->mdio.dev.of_node;
+ 
+ 	if (!phydev->is_c45) {
+ 		ret = phy_get_c45_ids(phydev);
+ 		if (ret < 0)
+ 			return ret;
+ 	}
++
++	if (of_property_read_bool(node, "mxl,soft-reset")) {
++		ret = gpy_soft_reset(phydev);
++		if (ret < 0)
++			return ret;
++	}
+ 
+ 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+ 	if (!priv)
