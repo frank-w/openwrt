@@ -1,0 +1,282 @@
+From: Chad Monroe <chad@monroe.io>
+Date: Wed, 01 Oct 2025 03:55:26 -0700
+Subject: [PATCH] net: dsa: mxl862xx: fix RMON counters
+
+use MXL862XX_RMON_PORT_GET, fix 64-bit counters 
+
+Signed-off-by: Chad Monroe <chad@monroe.io>
+---
+ drivers/net/dsa/mxl862xx/mxl862xx-api.h |   56 ++++----
+ drivers/net/dsa/mxl862xx/mxl862xx.c     |  141 +++++++++-------------
+ 2 files changed, 89 insertions(+), 108 deletions(-)
+
+--- a/drivers/net/dsa/mxl862xx/mxl862xx-api.h
++++ b/drivers/net/dsa/mxl862xx/mxl862xx-api.h
+@@ -765,13 +765,29 @@ enum mxl862xx_rmon_port_type {
+ };
+ 
+ /**
+- * struct mxl862xx_debug_rmon_port_cnt - Port Counters
+- * @port_id: Ethernet Port number
+- * @port_type: See &enum mxl862xx_rmon_port_type
+- * @rx_extended_vlan_discard_pkts: 
+- * @mtu_exceed_discard_pkts: 
+- * @tx_under_size_good_pkts: 
+- * @tx_oversize_good_pkts: 
++ * struct mxl862xx_rmon_port_cnt - RMON Counters for physical port
++ * @port_type: Port Type. This gives information which type of port to get RMON.
++ *             port_id should be based on this field.
++ *             This is new in GSWIP-3.1. For GSWIP-2.1/2.2/3.0, this field is always
++ *             ZERO (GSW_LOGICAL_PORT).
++ * @port_id: Ethernet Port number (zero-based counting). The valid range is hardware
++ *           dependent. An error code is delivered if the selected port is not
++ *           available. This parameter specifies for which MAC port the RMON
++ *           counter is read. It has to be set by the application before
++ *           calling GSW_RMON_Port_Get.
++ * @sub_if_id_group: Sub interface ID group. The valid range is hardware/protocol dependent.
++ *                   This field is valid when ePortType is GSW_CTP_PORT.
++ *                   Sub interface ID group is defined for each of GSW_LogicalPortMode_t.
++ *                   For both GSW_LOGICAL_PORT_8BIT_WLAN and GSW_LOGICAL_PORT_9BIT_WLAN,
++ *                   this field is VAP. For GSW_LOGICAL_PORT_GPON, this field is GEM index.
++ *                   For GSW_LOGICAL_PORT_EPON, this field is stream index.
++ *                   For GSW_LOGICAL_PORT_GINT, this field is LLID.
++ *                   For others, this field is 0.
++ * @pce_bypass: Separate set of CTP Tx counters when PCE is bypassed. GSWIP-3.1 only.
++ * @rx_extended_vlan_discard_pkts: Discarded at Extended VLAN Operation Packet Count. GSWIP-3.1 only.
++ * @mtu_exceed_discard_pkts: Discarded MTU Exceeded Packet Count. GSWIP-3.1 only.
++ * @tx_under_size_good_pkts: Tx Undersize (<64) Packet Count. GSWIP-3.1 only.
++ * @tx_oversize_good_pkts: Tx Oversize (>1518) Packet Count. GSWIP-3.1 only.
+  * @rx_good_pkts: Receive Packet Count (only packets that are accepted and not discarded).
+  * @rx_unicast_pkts: Receive Unicast Packet Count.
+  * @rx_broadcast_pkts: Receive Broadcast Packet Count.
+@@ -812,20 +828,12 @@ enum mxl862xx_rmon_port_type {
+  * @rx_good_bytes: Receive Good Byte Count (64 bit).
+  * @rx_bad_bytes: Receive Bad Byte Count (64 bit).
+  * @tx_good_bytes: Transmit Good Byte Count (64 bit).
+- * @rx_unicast_pkts_yellow_red: Receive Unicast Packet Count for Yellow & Red packet.
+- * @rx_broadcast_pkts_yellow_red: Receive Broadcast Packet Count for Yellow & Red packet.
+- * @rx_multicast_pkts_yellow_red: Receive Multicast Packet Count for Yellow & Red packet.
+- * @rx_good_bytes_yellow_red: Receive Good Byte Count (64 bit) for Yellow & Red packet.
+- * @rx_good_pkts_yellow_red: Receive Packet Count for Yellow & Red packet.
+- * @tx_unicast_pkts_yellow_red: Transmit Unicast Packet Count for Yellow & Red packet.
+- * @tx_broadcast_pkts_yellow_red: Transmit Broadcast Packet Count for Yellow & Red packet.
+- * @tx_multicast_pkts_yellow_red: Transmit Multicast Packet Count for Yellow & Red packet.
+- * @tx_good_bytes_yellow_red: Transmit Good Byte Count (64 bit) for Yellow & Red packet.
+- * @tx_good_pkts_yellow_red: Transmit Packet Count for Yellow & Red packet.
+  */
+-struct mxl862xx_debug_rmon_port_cnt {
++struct mxl862xx_rmon_port_cnt {
++	enum mxl862xx_port_type port_type;
+ 	__le16 port_id;
+-	enum mxl862xx_rmon_port_type port_type;
++	__le16 sub_if_id_group;
++	u8 pce_bypass;
+ 	__le32 rx_extended_vlan_discard_pkts;
+ 	__le32 mtu_exceed_discard_pkts;
+ 	__le32 tx_under_size_good_pkts;
+@@ -870,16 +878,6 @@ struct mxl862xx_debug_rmon_port_cnt {
+ 	__le64 rx_good_bytes;
+ 	__le64 rx_bad_bytes;
+ 	__le64 tx_good_bytes;
+-	__le32 rx_unicast_pkts_yellow_red;
+-	__le32 rx_broadcast_pkts_yellow_red;
+-	__le32 rx_multicast_pkts_yellow_red;
+-	__le64 rx_good_bytes_yellow_red;
+-	__le32 rx_good_pkts_yellow_red;
+-	__le32 tx_unicast_pkts_yellow_red;
+-	__le32 tx_broadcast_pkts_yellow_red;
+-	__le32 tx_multicast_pkts_yellow_red;
+-	__le64 tx_good_bytes_yellow_red;
+-	__le32 tx_good_pkts_yellow_red;
+ } __packed;
+ 
+ /**
+--- a/drivers/net/dsa/mxl862xx/mxl862xx.c
++++ b/drivers/net/dsa/mxl862xx/mxl862xx.c
+@@ -56,74 +56,62 @@
+  */
+ #define MAX_RULES_RECYCLED MAX_VLANS
+ 
+-struct mxl862xx_mibs {
++struct mxl862xx_mib_desc {
+ 	unsigned int size;
+ 	unsigned int offset;
+ 	const char *name;
+ };
+ 
+-#define MIB_DESC(_name, _element)						\
++#define MIB_DESC(_size, _name, _element)						\
+ {										\
++	.size = _size,								\
+ 	.name = _name,								\
+-	.offset = offsetof(struct mxl862xx_debug_rmon_port_cnt, _element)	\
++	.offset = offsetof(struct mxl862xx_rmon_port_cnt, _element)	\
+ }
+ 
+-static const struct mxl862xx_mibs mxl862xx_mibs_rx[] = {
+-	MIB_DESC("RxGoodPkts", rx_good_pkts),
+-	MIB_DESC("RxUnicastPkts", rx_unicast_pkts),
+-	MIB_DESC("RxBroadcastPkts", rx_broadcast_pkts),
+-	MIB_DESC("RxMulticastPkts", rx_multicast_pkts),
+-	MIB_DESC("RxFCSErrorPkts", rx_fcserror_pkts),
+-	MIB_DESC("RxUnderSizeGoodPkts", rx_under_size_good_pkts),
+-	MIB_DESC("RxOversizeGoodPkts", rx_oversize_error_pkts),
+-	MIB_DESC("RxUnderSizeErrorPkts", rx_under_size_error_pkts),
+-	MIB_DESC("RxOversizeErrorPkts", rx_oversize_error_pkts),
+-	MIB_DESC("RxFilteredPkts", rx_filtered_pkts),
+-	MIB_DESC("Rx64BytePkts", rx64byte_pkts),
+-	MIB_DESC("Rx127BytePkts", rx127byte_pkts),
+-	MIB_DESC("Rx255BytePkts", rx255byte_pkts),
+-	MIB_DESC("Rx511BytePkts", rx511byte_pkts),
+-	MIB_DESC("Rx1023BytePkts", rx1023byte_pkts),
+-	MIB_DESC("RxMaxBytePkts", rx_max_byte_pkts),
+-	MIB_DESC("RxDroppedPkts", rx_dropped_pkts),
+-	MIB_DESC("RxExtendedVlanDiscardPkts", rx_extended_vlan_discard_pkts),
+-	MIB_DESC("MtuExceedDiscardPkts", mtu_exceed_discard_pkts),
+-	MIB_DESC("RxGoodBytes", rx_good_bytes),
+-	MIB_DESC("RxBadBytes", rx_bad_bytes),
+-	MIB_DESC("RxUnicastPktsYellowRed", rx_unicast_pkts_yellow_red),
+-	MIB_DESC("RxBroadcastPktsYellowRed", rx_broadcast_pkts_yellow_red),
+-	MIB_DESC("RxMulticastPktsYellowRed", rx_multicast_pkts_yellow_red),
+-	MIB_DESC("RxGoodPktsYellowRed", rx_good_pkts_yellow_red),
+-	MIB_DESC("RxGoodBytesYellowRed", rx_good_bytes_yellow_red),
+-	MIB_DESC("RxGoodPausePkts", rx_good_pause_pkts),
+-	MIB_DESC("RxAlignErrorPkts", rx_align_error_pkts),
+-};
+-
+-static const struct mxl862xx_mibs mxl862xx_mibs_tx[] = {
+-	MIB_DESC("TxGoodPkts", tx_good_pkts),
+-	MIB_DESC("TxUnicastPkts", tx_unicast_pkts),
+-	MIB_DESC("TxBroadcastPkts", tx_broadcast_pkts),
+-	MIB_DESC("TxMulticastPkts", tx_multicast_pkts),
+-	MIB_DESC("Tx64BytePkts", tx64byte_pkts),
+-	MIB_DESC("Tx127BytePkts", tx127byte_pkts),
+-	MIB_DESC("Tx255BytePkts", tx255byte_pkts),
+-	MIB_DESC("Tx511BytePkts", tx511byte_pkts),
+-	MIB_DESC("Tx1023BytePkts", tx1023byte_pkts),
+-	MIB_DESC("TxMaxBytePkts", tx_max_byte_pkts),
+-	MIB_DESC("TxDroppedPkts", tx_dropped_pkts),
+-	MIB_DESC("TxAcmDroppedPkts", tx_acm_dropped_pkts),
+-	MIB_DESC("TxGoodBytes", tx_good_bytes),
+-	MIB_DESC("TxUnicastPktsYellowRed", tx_unicast_pkts_yellow_red),
+-	MIB_DESC("TxBroadcastPktsYellowRed", tx_broadcast_pkts_yellow_red),
+-	MIB_DESC("TxMulticastPktsYellowRed", tx_multicast_pkts_yellow_red),
+-	MIB_DESC("TxGoodPktsYellowRed", tx_good_pkts_yellow_red),
+-	MIB_DESC("TxGoodBytesYellowRed", tx_good_bytes_yellow_red),
+-	MIB_DESC("TxSingleCollCount", tx_single_coll_count),
+-	MIB_DESC("TxMultCollCount", tx_mult_coll_count),
+-	MIB_DESC("TxLateCollCount", tx_late_coll_count),
+-	MIB_DESC("TxExcessCollCount", tx_excess_coll_count),
+-	MIB_DESC("TxCollCount", tx_coll_count),
+-	MIB_DESC("TxPauseCount", tx_pause_count),
++static const struct mxl862xx_mib_desc mxl862xx_mib[] = {
++	MIB_DESC(1, "TxGoodPkts", tx_good_pkts),
++	MIB_DESC(1, "TxUnicastPkts", tx_unicast_pkts),
++	MIB_DESC(1, "TxBroadcastPkts", tx_broadcast_pkts),
++	MIB_DESC(1, "TxMulticastPkts", tx_multicast_pkts),
++	MIB_DESC(1, "Tx64BytePkts", tx64byte_pkts),
++	MIB_DESC(1, "Tx127BytePkts", tx127byte_pkts),
++	MIB_DESC(1, "Tx255BytePkts", tx255byte_pkts),
++	MIB_DESC(1, "Tx511BytePkts", tx511byte_pkts),
++	MIB_DESC(1, "Tx1023BytePkts", tx1023byte_pkts),
++	MIB_DESC(1, "TxMaxBytePkts", tx_max_byte_pkts),
++	MIB_DESC(1, "TxDroppedPkts", tx_dropped_pkts),
++	MIB_DESC(1, "TxAcmDroppedPkts", tx_acm_dropped_pkts),
++	MIB_DESC(2, "TxGoodBytes", tx_good_bytes),
++	MIB_DESC(1, "TxSingleCollCount", tx_single_coll_count),
++	MIB_DESC(1, "TxMultCollCount", tx_mult_coll_count),
++	MIB_DESC(1, "TxLateCollCount", tx_late_coll_count),
++	MIB_DESC(1, "TxExcessCollCount", tx_excess_coll_count),
++	MIB_DESC(1, "TxCollCount", tx_coll_count),
++	MIB_DESC(1, "TxPauseCount", tx_pause_count),
++	MIB_DESC(1, "RxGoodPkts", rx_good_pkts),
++	MIB_DESC(1, "RxUnicastPkts", rx_unicast_pkts),
++	MIB_DESC(1, "RxBroadcastPkts", rx_broadcast_pkts),
++	MIB_DESC(1, "RxMulticastPkts", rx_multicast_pkts),
++	MIB_DESC(1, "RxFCSErrorPkts", rx_fcserror_pkts),
++	MIB_DESC(1, "RxUnderSizeGoodPkts", rx_under_size_good_pkts),
++	MIB_DESC(1, "RxOversizeGoodPkts", rx_oversize_error_pkts),
++	MIB_DESC(1, "RxUnderSizeErrorPkts", rx_under_size_error_pkts),
++	MIB_DESC(1, "RxOversizeErrorPkts", rx_oversize_error_pkts),
++	MIB_DESC(1, "RxFilteredPkts", rx_filtered_pkts),
++	MIB_DESC(1, "Rx64BytePkts", rx64byte_pkts),
++	MIB_DESC(1, "Rx127BytePkts", rx127byte_pkts),
++	MIB_DESC(1, "Rx255BytePkts", rx255byte_pkts),
++	MIB_DESC(1, "Rx511BytePkts", rx511byte_pkts),
++	MIB_DESC(1, "Rx1023BytePkts", rx1023byte_pkts),
++	MIB_DESC(1, "RxMaxBytePkts", rx_max_byte_pkts),
++	MIB_DESC(1, "RxDroppedPkts", rx_dropped_pkts),
++	MIB_DESC(1, "RxExtendedVlanDiscardPkts", rx_extended_vlan_discard_pkts),
++	MIB_DESC(1, "MtuExceedDiscardPkts", mtu_exceed_discard_pkts),
++	MIB_DESC(2, "RxGoodBytes", rx_good_bytes),
++	MIB_DESC(2, "RxBadBytes", rx_bad_bytes),
++	MIB_DESC(1, "RxGoodPausePkts", rx_good_pause_pkts),
++	MIB_DESC(1, "RxAlignErrorPkts", rx_align_error_pkts),
+ };
+ 
+ static int mxl862xx_phy_read_mmd(struct mxl862xx_priv *priv, int port, int devadd, int reg)
+@@ -3370,29 +3358,27 @@ static void mxl862xx_phylink_mac_link_up
+ static void mxl862xx_get_ethtool_stats(struct dsa_switch *ds, int port,
+ 				       uint64_t *data)
+ {
+-	struct mxl862xx_debug_rmon_port_cnt param = {
++	struct mxl862xx_rmon_port_cnt param = {
++		.port_type = MXL862XX_CTP_PORT,
+ 		.port_id = DSA_MXL_PORT(port),
+-		.port_type = MXL862XX_RMON_CTP_PORT_RX,
+ 	};
+-	u8 *mibs = (void *)&param;
+ 	int ret, i;
+ 
+-	ret = MXL862XX_API_READ(ds->priv, MXL862XX_DEBUG_RMON_PORT_GET, param);
++	ret = MXL862XX_API_READ(ds->priv, MXL862XX_RMON_PORT_GET, param);
+ 	if (ret) {
+-		dev_err(ds->dev, "failed to read RX stats on port %d\n", port);
++		dev_err(ds->dev, "failed to read RMON stats on port %d\n", port);
+ 		return;
+ 	}
+-	for (i = 0; i < ARRAY_SIZE(mxl862xx_mibs_rx); i++)
+-		*data++ = (u32)mibs[mxl862xx_mibs_rx[i].offset];
+ 
+-	param.port_type = MXL862XX_RMON_CTP_PORT_RX;
+-	ret = MXL862XX_API_READ(ds->priv, MXL862XX_DEBUG_RMON_PORT_GET, param);
+-	if (ret) {
+-		dev_err(ds->dev, "failed to read RX stats on port %d\n", port);
+-		return;
++	for (i = 0; i < ARRAY_SIZE(mxl862xx_mib); i++) {
++		const struct mxl862xx_mib_desc *mib = &mxl862xx_mib[i];
++		void *field = (u8 *)&param + mib->offset;
++
++		if (mib->size == 1)
++			*data++ = le32_to_cpu(*(__le32 *)field);
++		else
++			*data++ = le64_to_cpu(*(__le64 *)field);
+ 	}
+-	for (i = 0; i < ARRAY_SIZE(mxl862xx_mibs_tx); i++)
+-		*data++ = (u32)mibs[mxl862xx_mibs_tx[i].offset];
+ }
+ 
+ static void mxl862xx_get_strings(struct dsa_switch *ds, int port,
+@@ -3403,11 +3389,8 @@ static void mxl862xx_get_strings(struct
+ 	if (stringset != ETH_SS_STATS)
+ 		return;
+ 
+-	for (i = 0; i < ARRAY_SIZE(mxl862xx_mibs_rx); i++)
+-		ethtool_puts(&data, mxl862xx_mibs_rx[i].name);
+-
+-	for (i = 0; i < ARRAY_SIZE(mxl862xx_mibs_tx); i++)
+-		ethtool_puts(&data, mxl862xx_mibs_tx[i].name);
++	for (i = 0; i < ARRAY_SIZE(mxl862xx_mib); i++)
++		ethtool_puts(&data, mxl862xx_mib[i].name);
+ }
+ 
+ static int mxl862xx_get_sset_count(struct dsa_switch *ds, int port, int sset)
+@@ -3415,7 +3398,7 @@ static int mxl862xx_get_sset_count(struc
+ 	if (sset != ETH_SS_STATS)
+ 		return 0;
+ 
+-	return ARRAY_SIZE(mxl862xx_mibs_rx) + ARRAY_SIZE(mxl862xx_mibs_tx);
++	return ARRAY_SIZE(mxl862xx_mib);
+ }
+ 
+ static int mxl862xx_port_mirror_add(struct dsa_switch *ds, int port,

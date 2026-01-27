@@ -1,0 +1,23 @@
+From: Chad Monroe <chad@monroe.io>
+Date: Tue, 09 Dec 2025 16:27:14 -0800
+Subject: [PATCH] net: dsa: tag_mxl862xx_8021q: set skb queue mapping to port index
+
+mtk_eth_soc uses the skb queue mapping to select a per-port QDMA TX queue
+when DSA is enabled. Setting it to the DSA port index ensures each switch
+port uses a dedicated TX queue.
+
+Signed-off-by: Chad Monroe <chad@monroe.io>
+---
+ net/dsa/tag_mxl862xx_8021q.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/net/dsa/tag_mxl862xx_8021q.c
++++ b/net/dsa/tag_mxl862xx_8021q.c
+@@ -51,6 +51,7 @@ static struct sk_buff *mxl862_8021q_tag_
+ 	u16 tx_vid = dsa_tag_8021q_standalone_vid(dp);
+ 	u16 queue_mapping = skb_get_queue_mapping(skb);
+ 	u8 pcp = netdev_txq_to_tc(dev, queue_mapping);
++	skb_set_queue_mapping(skb, dp->index);
+ 
+ 	dsa_8021q_xmit(skb, dev, ETH_P_8021Q,
+ 			      ((pcp << VLAN_PRIO_SHIFT) | tx_vid));

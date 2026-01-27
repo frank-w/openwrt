@@ -1,0 +1,81 @@
+From: Chad Monroe <chad@monroe.io>
+Date: Tue, 16 Dec 2025 05:44:40 -0800
+Subject: [PATCH] mxl862xx: poll for switch readiness after reset
+
+Replace fixed 4+ second delay with poll that waits for firmware
+version and configuration API to respond. Reduces boot time by
+2-4 seconds.
+
+Increase API command timeout from 10ms to 100ms to prevent
+spurious ETIMEDOUT errors during port initialization when the switch
+is processing many Extended VLAN operations in rapid succession.
+
+Signed-off-by: Chad Monroe <chad@monroe.io>
+---
+ drivers/net/dsa/mxl862xx/mxl862xx-host.c |    2 -
+ drivers/net/dsa/mxl862xx/mxl862xx.c      |   36 ++++++++++++++++++++-
+ 2 files changed, 36 insertions(+), 2 deletions(-)
+
+--- a/drivers/net/dsa/mxl862xx/mxl862xx.c
++++ b/drivers/net/dsa/mxl862xx/mxl862xx.c
+@@ -3099,6 +3099,37 @@ static void mxl862xx_setup_pcs(struct mx
+ 	pcs->port = port;
+ }
+ 
++#define MXL862XX_READY_TIMEOUT_MS	10000
++#define MXL862XX_READY_POLL_MS		100
++
++static int mxl862xx_wait_ready(struct mxl862xx_priv *priv)
++{
++	struct mxl862xx_sys_fw_image_version ver = {};
++	struct mxl862xx_cfg cfg = {};
++	unsigned long start = jiffies;
++	unsigned long timeout = start + msecs_to_jiffies(MXL862XX_READY_TIMEOUT_MS);
++	int ret;
++
++	do {
++		ret = MXL862XX_API_READ(priv, SYS_MISC_FW_VERSION, ver);
++		if (ret == 0 && (ver.iv_major || ver.iv_minor)) {
++			ret = MXL862XX_API_READ(priv, MXL862XX_COMMON_CFGGET, cfg);
++			if (ret == 0) {
++				dev_info(priv->dev, "switch ready after %u ms, firmware %u.%u.%u (build %u)\n",
++					 jiffies_to_msecs(jiffies - start),
++					 ver.iv_major, ver.iv_minor,
++					 le16_to_cpu(ver.iv_revision),
++					 le32_to_cpu(ver.iv_build_num));
++				return 0;
++			}
++		}
++		msleep(MXL862XX_READY_POLL_MS);
++	} while (time_before(jiffies, timeout));
++
++	dev_err(priv->dev, "switch not responding after reset\n");
++	return -ETIMEDOUT;
++}
++
+ static int mxl862xx_setup(struct dsa_switch *ds)
+ {
+ 	struct mxl862xx_priv *priv = ds->priv;
+@@ -3112,7 +3143,10 @@ static int mxl862xx_setup(struct dsa_swi
+ 	gpiod_set_value_cansleep(priv->reset, 1);
+ 	usleep_range(5000, 5100);
+ 	gpiod_set_value_cansleep(priv->reset, 0);
+-	usleep_range(4000000, 6000000);
++
++	ret = mxl862xx_wait_ready(priv);
++	if (ret)
++		return ret;
+ 
+ 	priv->user_pnum = 0;
+ 	for (j = 0; j < ds->num_ports; j++) {
+--- a/drivers/net/dsa/mxl862xx/mxl862xx-host.c
++++ b/drivers/net/dsa/mxl862xx/mxl862xx-host.c
+@@ -14,7 +14,7 @@
+ #define CTRL_BUSY_MASK BIT(15)
+ #define CTRL_CMD_MASK (BIT(15) - 1)
+ 
+-#define MAX_BUSY_LOOP 1000 /* roughly 10ms */
++#define MAX_BUSY_LOOP 10000 /* roughly 100ms */
+ 
+ #define MXL862XX_MMD_DEV 30
+ #define MXL862XX_MMD_REG_CTRL 0

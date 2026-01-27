@@ -1,0 +1,44 @@
+From: Piotr Kubik <piotr.kubik@adtran.com>
+Date: Tue, 25 Mar 2025 12:16:04 +0100
+Subject: [PATCH] net: dsa: mxl862xx: Register MDIO bus using _of_
+
+Use DT-aware version of mdio_bus_register() function.
+This is required to call PoE PSE init functions matching MDIO PHYs with
+PSE channels.
+
+Signed-off-by: Piotr Kubik <piotr.kubik@adtran.com>
+---
+ drivers/net/dsa/mxl862xx/mxl862xx.c     | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+--- a/drivers/net/dsa/mxl862xx/mxl862xx.c
++++ b/drivers/net/dsa/mxl862xx/mxl862xx.c
+@@ -15,6 +15,7 @@
+ #include <linux/module.h>
+ #include <linux/netdevice.h>
+ #include <linux/of_device.h>
++#include <linux/of_mdio.h>
+ #include <linux/phy.h>
+ #include <net/dsa.h>
+ #include <linux/dsa/8021q.h>
+@@ -2975,7 +2976,20 @@ static int mxl862xx_setup_mdio(struct ds
+ 	if (priv->hw_info->ext_ports <= 2)
+ 		 bus->phy_mask |= 0xff00;
+ 
++#if IS_ENABLED(CONFIG_OF_MDIO)
++	struct device_node *mdio_np;
++
++	mdio_np = of_get_child_by_name(dev->of_node, "mdio");
++	if (!mdio_np) {
++		dev_err(dev, "no MDIO bus node\n");
++		of_node_put(mdio_np);
++		return -ENODEV;
++	}
++	ret = devm_of_mdiobus_register(dev, bus, mdio_np);
++	of_node_put(mdio_np);
++#else
+ 	ret = devm_mdiobus_register(dev, bus);
++#endif
+ 	if (ret)
+ 		dev_err(dev, "failed to register MDIO bus: %d\n", ret);
+ 
