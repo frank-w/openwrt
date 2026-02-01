@@ -36,7 +36,7 @@
 +			#address-cells = <1>;
 +			#size-cells = <0>;
 +			port0: port@0 {
-+				reg = <0>;
++				reg = <1>;
 +				label = "lan0";
 +				phy-handle = <&switchphy0>;
 +				phy-mode = "internal";
@@ -44,7 +44,7 @@
 +			};
 +
 +			port1: port@1 {
-+				reg = <1>;
++				reg = <2>;
 +				label = "lan1";
 +				phy-handle = <&switchphy1>;
 +				phy-mode = "internal";
@@ -52,7 +52,7 @@
 +			};
 +
 +			port2: port@2 {
-+				reg = <2>;
++				reg = <3>;
 +				label = "lan2";
 +				phy-handle = <&switchphy2>;
 +				phy-mode = "internal";
@@ -60,7 +60,7 @@
 +			};
 +
 +			port3: port@3 {
-+				reg = <3>;
++				reg = <4>;
 +				label = "lan3";
 +				phy-handle = <&switchphy3>;
 +				phy-mode = "internal";
@@ -68,7 +68,7 @@
 +			};
 +
 +			port8: port@8 {
-+				reg = <8>;
++				reg = <9>;
 +				label = "cpu";
 +				phy-mode = "usxgmii";
 +				ethernet = <&gmac2>;
