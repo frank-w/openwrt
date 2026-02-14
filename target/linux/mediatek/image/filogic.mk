@@ -811,7 +811,7 @@ define Device/bananapi_bpi-r4-pro-8x
   DEVICE_DTS := mt7988a-bananapi-bpi-r4-pro-8x
   DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4-pro-8x
   $(call Device/bananapi_bpi-r4-common)
-  DEVICE_PACKAGES += kmod-phy-aeonsemi-as21xxx kmod-dsa-mxl862xx
+  DEVICE_PACKAGES += kmod-phy-aeonsemi-as21xxx kmod-dsa-mxl862xx kmod-gpio-pca953x kmod-nvme
 endef
 TARGET_DEVICES += bananapi_bpi-r4-pro-8x
 
