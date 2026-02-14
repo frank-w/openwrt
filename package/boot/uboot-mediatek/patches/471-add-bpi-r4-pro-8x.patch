@@ -1,6 +1,6 @@
 --- /dev/null
-+++ u-boot-2026.01/configs/mt7988a_bananapi_bpi-r4-pro-8x-emmc_defconfig
-@@ -0,0 +1,145 @@
++++ b/configs/mt7988a_bananapi_bpi-r4-pro-8x-emmc_defconfig
+@@ -0,0 +1,148 @@
 +CONFIG_ARM=y
 +CONFIG_SYS_HAS_NONCACHED_MEMORY=y
 +CONFIG_POSITION_INDEPENDENT=y
@@ -119,7 +119,10 @@
 +CONFIG_MTD_UBI_FASTMAP=y
 +CONFIG_PHY_FIXED=y
 +CONFIG_MEDIATEK_ETH=y
-+CONFIG_PCIE_MEDIATEK=y
++CONFIG_PCIE_MEDIATEK_GEN3=y
++CONFIG_NVME_PCI=y
++CONFIG_CMD_NVME=y
++CONFIG_BLK=y
 +CONFIG_PHY=y
 +CONFIG_PHY_MTK_TPHY=y
 +CONFIG_PINCTRL=y
@@ -147,8 +150,8 @@
 +CONFIG_ZSTD=y
 +CONFIG_HEXDUMP=y
 --- /dev/null
-+++ u-boot-2026.01/configs/mt7988a_bananapi_bpi-r4-pro-8x-sdmmc_defconfig
-@@ -0,0 +1,145 @@
++++ b/configs/mt7988a_bananapi_bpi-r4-pro-8x-sdmmc_defconfig
+@@ -0,0 +1,148 @@
 +CONFIG_ARM=y
 +CONFIG_SYS_HAS_NONCACHED_MEMORY=y
 +CONFIG_POSITION_INDEPENDENT=y
@@ -267,7 +270,10 @@
 +CONFIG_MTD_UBI_FASTMAP=y
 +CONFIG_PHY_FIXED=y
 +CONFIG_MEDIATEK_ETH=y
-+CONFIG_PCIE_MEDIATEK=y
++CONFIG_PCIE_MEDIATEK_GEN3=y
++CONFIG_NVME_PCI=y
++CONFIG_CMD_NVME=y
++CONFIG_BLK=y
 +CONFIG_PHY=y
 +CONFIG_PHY_MTK_TPHY=y
 +CONFIG_PINCTRL=y
@@ -295,8 +301,8 @@
 +CONFIG_ZSTD=y
 +CONFIG_HEXDUMP=y
 --- /dev/null
-+++ u-boot-2026.01/configs/mt7988a_bananapi_bpi-r4-pro-8x-snand_defconfig
-@@ -0,0 +1,145 @@
++++ b/configs/mt7988a_bananapi_bpi-r4-pro-8x-snand_defconfig
+@@ -0,0 +1,148 @@
 +CONFIG_ARM=y
 +CONFIG_SYS_HAS_NONCACHED_MEMORY=y
 +CONFIG_POSITION_INDEPENDENT=y
@@ -415,7 +421,10 @@
 +CONFIG_MTD_UBI_FASTMAP=y
 +CONFIG_PHY_FIXED=y
 +CONFIG_MEDIATEK_ETH=y
-+CONFIG_PCIE_MEDIATEK=y
++CONFIG_PCIE_MEDIATEK_GEN3=y
++CONFIG_NVME_PCI=y
++CONFIG_CMD_NVME=y
++CONFIG_BLK=y
 +CONFIG_PHY=y
 +CONFIG_PHY_MTK_TPHY=y
 +CONFIG_PINCTRL=y
@@ -443,7 +452,7 @@
 +CONFIG_ZSTD=y
 +CONFIG_HEXDUMP=y
 --- /dev/null
-+++ u-boot-2026.01/defenvs/bananapi_bpi-r4-pro-8x_emmc_env
++++ b/defenvs/bananapi_bpi-r4-pro-8x_emmc_env
 @@ -0,0 +1,57 @@
 +ipaddr=192.168.1.1
 +serverip=192.168.1.254
@@ -503,7 +512,7 @@
 +_switch_to_menu=setenv _switch_to_menu ; setenv bootdelay 3 ; setenv bootmenu_delay 3 ; setenv bootmenu_0 $bootmenu_0d ; setenv bootmenu_0d ; run _bootmenu_update_title
 +_bootmenu_update_title=setenv _bootmenu_update_title ; setenv bootmenu_title "$bootmenu_title       [33m$ver[0m"
 --- /dev/null
-+++ u-boot-2026.01/defenvs/bananapi_bpi-r4-pro-8x_sdmmc_env
++++ b/defenvs/bananapi_bpi-r4-pro-8x_sdmmc_env
 @@ -0,0 +1,66 @@
 +ipaddr=192.168.1.1
 +serverip=192.168.1.254
@@ -572,7 +581,7 @@
 +_switch_to_menu=setenv _switch_to_menu ; setenv bootdelay 3 ; setenv bootmenu_delay 3 ; setenv bootmenu_0 $bootmenu_0d ; setenv bootmenu_0d ; run _bootmenu_update_title
 +_bootmenu_update_title=setenv _bootmenu_update_title ; setenv bootmenu_title "$bootmenu_title       [33m$ver[0m"
 --- /dev/null
-+++ u-boot-2026.01/defenvs/bananapi_bpi-r4-pro-8x_snand_env
++++ b/defenvs/bananapi_bpi-r4-pro-8x_snand_env
 @@ -0,0 +1,67 @@
 +ipaddr=192.168.1.1
 +serverip=192.168.1.254
@@ -642,7 +651,7 @@
 +_switch_to_menu=setenv _switch_to_menu ; setenv bootdelay 3 ; setenv bootmenu_delay 3 ; setenv bootmenu_0 $bootmenu_0d ; setenv bootmenu_0d ; run _bootmenu_update_title
 +_bootmenu_update_title=setenv _bootmenu_update_title ; setenv bootmenu_title "$bootmenu_title       [33m$ver[0m"
 --- /dev/null
-+++ u-boot-2026.01/arch/arm/dts/mt7988a-bananapi-bpi-r4-pro-8x-emmc.dts
++++ b/arm/dts/mt7988a-bananapi-bpi-r4-pro-8x-emmc.dts
 @@ -0,0 +1,21 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
@@ -666,7 +675,7 @@
 +	status = "okay";
 +};
 --- /dev/null
-+++ u-boot-2026.01/arch/arm/dts/mt7988a-bananapi-bpi-r4-pro-8x-sd.dts
++++ b/arm/dts/mt7988a-bananapi-bpi-r4-pro-8x-sd.dts
 @@ -0,0 +1,19 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
@@ -688,8 +697,8 @@
 +	status = "okay";
 +};
 --- /dev/null
-+++ u-boot-2026.01/arch/arm/dts/mt7988a-bananapi-bpi-r4-pro-8x.dtsi
-@@ -0,0 +1,241 @@
++++ b/arch/arm/dts/mt7988a-bananapi-bpi-r4-pro-8x.dtsi
+@@ -0,0 +1,267 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Copyright (c) 2022 MediaTek Inc.
@@ -815,6 +824,20 @@
 +};
 +
 +&pio {
++	/* 1L0 0=key-b (CN15), 1=key-m (CN13) */
++	/*pcie-2-hog {
++		gpio-hog;
++		gpios = <79 GPIO_ACTIVE_HIGH>;
++		output-high;
++	};*/
++
++	/* 1L1 0=key-b (CN18), 1=key-m (CN14) */
++	pcie-3-hog {
++		gpio-hog;
++		gpios = <63 GPIO_ACTIVE_HIGH>;
++		output-high;
++	};
++
 +	i2c1_pins: i2c1-pins {
 +		mux {
 +			function = "i2c";
@@ -930,4 +953,16 @@
 +		};
 +
 +	};
++};
++
++&pcie0 {
++	status = "okay";
++};
++
++&pcie1 {
++	status = "okay";
++};
++
++&pcie3 {
++	status = "okay";
 +};
