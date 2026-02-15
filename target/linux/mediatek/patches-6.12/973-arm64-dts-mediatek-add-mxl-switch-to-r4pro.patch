@@ -35,7 +35,7 @@
 +		ports {
 +			#address-cells = <1>;
 +			#size-cells = <0>;
-+			port0: port@0 {
++			port1: port@1 {
 +				reg = <1>;
 +				label = "lan0";
 +				phy-handle = <&switchphy0>;
@@ -43,7 +43,7 @@
 +				status = "okay";
 +			};
 +
-+			port1: port@1 {
++			port2: port@2 {
 +				reg = <2>;
 +				label = "lan1";
 +				phy-handle = <&switchphy1>;
@@ -51,7 +51,7 @@
 +				status = "okay";
 +			};
 +
-+			port2: port@2 {
++			port3: port@3 {
 +				reg = <3>;
 +				label = "lan2";
 +				phy-handle = <&switchphy2>;
@@ -59,7 +59,7 @@
 +				status = "okay";
 +			};
 +
-+			port3: port@3 {
++			port4: port@4 {
 +				reg = <4>;
 +				label = "lan3";
 +				phy-handle = <&switchphy3>;
@@ -67,7 +67,7 @@
 +				status = "okay";
 +			};
 +
-+			port8: port@8 {
++			port9: port@9 {
 +				reg = <9>;
 +				label = "cpu";
 +				phy-mode = "usxgmii";
