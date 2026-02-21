@@ -727,6 +727,24 @@ define Device/bananapi_bpi-r4-common
   IMAGE/sysupgrade.itb := append-kernel | fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-with-rootfs | pad-rootfs | append-metadata
 endef
 
+define Device/bananapi_bpi-r4
+  DEVICE_MODEL := BPi-R4
+  DEVICE_DTS := mt7988a-bananapi-bpi-r4
+  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4
+  $(call Device/bananapi_bpi-r4-common)
+endef
+TARGET_DEVICES += bananapi_bpi-r4
+
+define Device/bananapi_bpi-r4-poe
+  DEVICE_MODEL := BPi-R4 2.5GE
+  DEVICE_DTS := mt7988a-bananapi-bpi-r4-2g5
+  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4-poe
+  $(call Device/bananapi_bpi-r4-common)
+  DEVICE_PACKAGES += mt7988-2p5g-phy-firmware
+  SUPPORTED_DEVICES += bananapi,bpi-r4-2g5
+endef
+TARGET_DEVICES += bananapi_bpi-r4-poe
+
 define Device/bananapi_bpi-r4-pro-common
   DEVICE_VENDOR := Bananapi
   DEVICE_DTS_DIR := $(DTS_DIR)/
@@ -770,23 +788,14 @@ define Device/bananapi_bpi-r4-pro-common
   IMAGE/sysupgrade.itb := append-kernel | fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-with-rootfs | pad-rootfs | append-metadata
 endef
 
-define Device/bananapi_bpi-r4
-  DEVICE_MODEL := BPi-R4
-  DEVICE_DTS := mt7988a-bananapi-bpi-r4
-  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4
-  $(call Device/bananapi_bpi-r4-common)
+define Device/bananapi_bpi-r4-pro-8x
+  DEVICE_MODEL := BPi-R4-Pro-8X
+  DEVICE_DTS := mt7988a-bananapi-bpi-r4-pro-8x
+  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4-pro-8x
+  $(call Device/bananapi_bpi-r4-pro-common)
+  DEVICE_PACKAGES += kmod-phy-aeonsemi-as21xxx
 endef
-TARGET_DEVICES += bananapi_bpi-r4
-
-define Device/bananapi_bpi-r4-poe
-  DEVICE_MODEL := BPi-R4 2.5GE
-  DEVICE_DTS := mt7988a-bananapi-bpi-r4-2g5
-  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4-poe
-  $(call Device/bananapi_bpi-r4-common)
-  DEVICE_PACKAGES += mt7988-2p5g-phy-firmware
-  SUPPORTED_DEVICES += bananapi,bpi-r4-2g5
-endef
-TARGET_DEVICES += bananapi_bpi-r4-poe
+TARGET_DEVICES += bananapi_bpi-r4-pro-8x
 
 define Device/bananapi_bpi-r4-lite
   DEVICE_VENDOR := Bananapi
@@ -847,15 +856,6 @@ ifeq ($(DUMP),)
 endif
 endef
 TARGET_DEVICES += bananapi_bpi-r4-lite
-
-define Device/bananapi_bpi-r4-pro-8x
-  DEVICE_MODEL := BPi-R4-Pro-8X
-  DEVICE_DTS := mt7988a-bananapi-bpi-r4-pro-8x
-  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4-pro-8x
-  $(call Device/bananapi_bpi-r4-pro-common)
-  DEVICE_PACKAGES += kmod-phy-aeonsemi-as21xxx
-endef
-TARGET_DEVICES += bananapi_bpi-r4-pro-8x
 
 define Device/bazis_ax3000wm
   DEVICE_VENDOR := Bazis
