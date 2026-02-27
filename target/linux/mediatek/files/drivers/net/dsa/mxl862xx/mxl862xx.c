@@ -3113,6 +3113,8 @@ static int mxl862xx_setup(struct dsa_switch *ds)
 	if (ret)
 		return ret;
 
+	usleep_range(4000000, 6000000);
+
 	ret = mxl862xx_firmware_load(priv);
 	if (ret)
 		dev_warn(ds->dev, "firmware load failed: %d, continuing\n", ret);
