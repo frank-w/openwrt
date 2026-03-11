@@ -34,6 +34,7 @@
 #define MXL862XX_ACTYPE_ADDRESS	(0 << 14)
 #define MXL862XX_ACTYPE_DATA	(1 << 14)
 
+#define MXL862XX_SWITCH_RESET 0x9907
 /**
  *  write access to MMD register of PHYs via Clause 22 extended access
  */
@@ -275,6 +276,24 @@ int mxl862xx_api_wrap(struct mxl862xx_priv *priv, u16 cmd, void *_data,
 
 out:
 	mutex_unlock(&priv->bus->mdio_lock);
+	return ret;
+}
+
+int mxl862xx_reset(struct mxl862xx_priv *priv)
+{
+	int ret;
+
+	mutex_lock_nested(&priv->bus->mdio_lock, MDIO_MUTEX_NESTED);
+
+	/* Software reset */
+	ret = mxl862xx_write(priv, MXL862XX_MMD_REG_LEN_RET, 0);
+	if (ret)
+		goto out;
+
+	ret = mxl862xx_write(priv, MXL862XX_MMD_REG_CTRL, MXL862XX_SWITCH_RESET);
+out:
+	mutex_unlock(&priv->bus->mdio_lock);
+
 	return ret;
 }
 

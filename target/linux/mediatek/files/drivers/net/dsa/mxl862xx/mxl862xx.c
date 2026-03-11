@@ -3105,9 +3105,18 @@ static int mxl862xx_setup(struct dsa_switch *ds)
 		.mask = MXL862XX_BRIDGE_PORT_CONFIG_MASK_BRIDGE_PORT_MAP,
 	};
 
-	gpiod_set_value_cansleep(priv->reset, 1);
-	usleep_range(5000, 5100);
-	gpiod_set_value_cansleep(priv->reset, 0);
+	if (priv->reset) {
+		dev_info(ds->dev, "do GPIO reset");
+		gpiod_set_value_cansleep(priv->reset, 1);
+		usleep_range(5000, 5100);
+		gpiod_set_value_cansleep(priv->reset, 0);
+	} else {
+		// do sw reset
+		dev_info(ds->dev, "do SW reset");
+		ret = mxl862xx_reset(priv);
+		if (ret)
+			return ret;
+	}
 
 	ret = mxl862xx_wait_ready(priv);
 	if (ret)
