@@ -874,7 +874,7 @@ Signed-off-by: Paolo Abeni <pabeni@redhat.com>
 +	int val;
 +
 +	return readx_poll_timeout(mxl862xx_ctrl_read, priv, val,
-+				  !(val & CTRL_BUSY_MASK), 15, 500000);
++				  !(val & CTRL_BUSY_MASK), 15, 5000000);
 +}
 +
 +static int mxl862xx_set_data(struct mxl862xx_priv *priv, u16 words)
