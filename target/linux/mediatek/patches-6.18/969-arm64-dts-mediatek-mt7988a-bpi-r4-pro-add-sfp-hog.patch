@@ -8,7 +8,7 @@ Signed-off-by: Frank Wunderlich <frank-w@public-files.de>
 ---
 --- a/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4-pro.dtsi
 +++ b/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4-pro.dtsi
-@@ -198,6 +198,14 @@
+@@ -191,6 +191,14 @@
  	status = "okay";
  };
  
@@ -23,7 +23,7 @@ Signed-off-by: Frank Wunderlich <frank-w@public-files.de>
  &gmac2 {
  	phy-mode = "10gbase-r";
  	phy-connection-type = "10gbase-r";
-@@ -267,6 +275,15 @@
+@@ -260,6 +268,15 @@
  					full-duplex;
  				};
  			};
@@ -39,7 +39,7 @@ Signed-off-by: Frank Wunderlich <frank-w@public-files.de>
  		};
  
  		mdio {
-@@ -292,6 +309,20 @@
+@@ -285,6 +302,20 @@
  	};
  };
  
