@@ -698,7 +698,7 @@
 +};
 --- /dev/null
 +++ b/arch/arm/dts/mt7988a-bananapi-bpi-r4-pro-8x.dtsi
-@@ -0,0 +1,241 @@
+@@ -0,0 +1,267 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Copyright (c) 2022 MediaTek Inc.
@@ -838,6 +838,20 @@
 +		};
 +	};
 +
++	/* 1L0 0=key-b (CN15), 1=key-m (CN13) */
++	/*pcie-2-hog {
++		gpio-hog;
++		gpios = <79 GPIO_ACTIVE_HIGH>;
++		output-high;
++	};*/
++
++	/* 1L1 0=key-b (CN18), 1=key-m (CN14) */
++	pcie-3-hog {
++		gpio-hog;
++		gpios = <63 GPIO_ACTIVE_HIGH>;
++		output-high;
++	};
++
 +	pwm_pins: pwm-pins {
 +		mux {
 +			function = "pwm";
@@ -939,4 +953,16 @@
 +		};
 +
 +	};
++};
++
++&pcie0 {
++	status = "okay";
++};
++
++&pcie1 {
++	status = "okay";
++};
++
++&pcie3 {
++	status = "okay";
 +};
