@@ -812,6 +812,15 @@ define Device/bananapi_bpi-r4-pro-common
   IMAGE/sysupgrade.itb := append-kernel | fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-with-rootfs | pad-rootfs | append-metadata
 endef
 
+define Device/bananapi_bpi-r4-pro-4e
+  DEVICE_MODEL := BPi-R4 Pro 4E
+  DEVICE_DTS := mt7988a-bananapi-bpi-r4-pro-4e
+  DEVICE_DTS_CONFIG := config-mt7988a-bananapi-bpi-r4-pro-4e
+  DEVICE_BL2 := comb
+  $(call Device/bananapi_bpi-r4-pro-common)
+endef
+TARGET_DEVICES += bananapi_bpi-r4-pro-4e
+
 define Device/bananapi_bpi-r4-pro-8x
   DEVICE_MODEL := BPi-R4 Pro 8X
   DEVICE_DTS := mt7988a-bananapi-bpi-r4-pro-8x
