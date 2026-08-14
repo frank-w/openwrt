@@ -1,0 +1,89 @@
+From: Pietro Ameruoso <p.ameruoso@live.it>
+Date: Sat, 15 Aug 2026 00:08:52 +0200
+Subject: [PATCH] net: phy: as21xxx: handle stale IDs during driver matching
+
+The AS21xxx can return the response from the preceding Clause 45
+transaction. The PHY-ID reads performed by match_phy_device() happen before
+a model-specific driver is bound, so they cannot use the driver's read_mmd
+workaround. A stale IPC or PHY-ID response can therefore prevent the
+model-specific driver from matching.
+
+Reuse as21xxx_read_mmd() for the match-time PHY-ID reads. It cannot be
+reached through phy_read_mmd() at this stage because phydev->drv has not
+been assigned yet.
+
+The initial Clause 45 scan can also cache a PCS ID of 0xffffffff when the
+PHY does not answer before its firmware-described reset sequence completes.
+Phylib applies that reset before driver matching, but the AS21xxx matcher
+rejects the stale cached ID before reading the live model ID.
+
+When the cached PCS ID is invalid, refresh it in the AS21xxx matcher using
+the delayed-read workaround. This keeps both workarounds local to the
+affected PHY family and allows normal vendor and model matching after reset
+deassertion.
+
+Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
+---
+--- a/drivers/net/phy/as21xxx.c
++++ b/drivers/net/phy/as21xxx.c
+@@ -900,6 +900,32 @@ static int as21xxx_led_polarity_set(stru
+ 			      mask, val);
+ }
+ 
++/* phydev->drv is not assigned while match_phy_device() is running, so
++ * phy_read_mmd() cannot dispatch to the AS21xxx read workaround.
++ */
++static int as21xxx_read_mmd(struct phy_device *phydev, int devad,
++			    u16 regnum);
++
++static int as21xxx_match_refresh_pcs_id(struct phy_device *phydev)
++{
++	u32 phy_id;
++	int ret;
++
++	ret = as21xxx_read_mmd(phydev, MDIO_MMD_PCS, MII_PHYSID1);
++	if (ret < 0)
++		return ret;
++	phy_id = ret << 16;
++
++	ret = as21xxx_read_mmd(phydev, MDIO_MMD_PCS, MII_PHYSID2);
++	if (ret < 0)
++		return ret;
++	phy_id |= ret;
++
++	phydev->c45_ids.device_ids[MDIO_MMD_PCS] = phy_id;
++
++	return 0;
++}
++
+ static int as21xxx_match_phy_device(struct phy_device *phydev,
+ 				    const struct phy_driver *phydrv)
+ {
+@@ -908,18 +934,24 @@ static int as21xxx_match_phy_device(stru
+ 	u32 phy_id;
+ 	int ret;
+ 
++	if (phydev->c45_ids.device_ids[MDIO_MMD_PCS] == 0xffffffff) {
++		ret = as21xxx_match_refresh_pcs_id(phydev);
++		if (ret < 0)
++			return ret;
++	}
++
+ 	/* Skip PHY that are not AS21xxx */
+ 	if (!phy_id_compare_vendor(phydev->c45_ids.device_ids[MDIO_MMD_PCS],
+ 				   PHY_VENDOR_AEONSEMI))
+ 		return genphy_match_phy_device(phydev, phydrv);
+ 
+ 	/* Read PHY ID to handle firmware loaded or HW reset */
+-	ret = phy_read_mmd(phydev, MDIO_MMD_PCS, MII_PHYSID1);
++	ret = as21xxx_read_mmd(phydev, MDIO_MMD_PCS, MII_PHYSID1);
+ 	if (ret < 0)
+ 		return ret;
+ 	phy_id = ret << 16;
+ 
+-	ret = phy_read_mmd(phydev, MDIO_MMD_PCS, MII_PHYSID2);
++	ret = as21xxx_read_mmd(phydev, MDIO_MMD_PCS, MII_PHYSID2);
+ 	if (ret < 0)
+ 		return ret;
+ 	phy_id |= ret;
+
