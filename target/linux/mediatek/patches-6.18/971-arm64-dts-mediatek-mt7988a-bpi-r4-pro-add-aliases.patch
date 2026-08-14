@@ -1,0 +1,14 @@
+--- a/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4-pro.dtsi
++++ b/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4-pro.dtsi
+@@ -16,6 +16,11 @@
+ / {
+ 	aliases {
+ 		ethernet0 = &gmac0;
++		ethernet1 = &gmac1;
++		ethernet2 = &gmac2;
++		serial0 = &serial0;
++		serial1 = &serial1;
++		serial2 = &serial2;
+ 		i2c0 = &i2c0;
+ 		i2c1 = &i2c1;
+ 		i2c2 = &i2c2;
