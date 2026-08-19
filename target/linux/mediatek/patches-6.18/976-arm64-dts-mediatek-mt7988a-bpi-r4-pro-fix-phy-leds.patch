@@ -18,10 +18,11 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 +			led@0 {
  				reg = <0>;
  				linux,default-trigger = "netdev";
+-				active-high;
+-				status = "okay";
 +				color = <LED_COLOR_ID_GREEN>;
 +				function = LED_FUNCTION_LAN;
- 				active-high;
--				status = "okay";
++				active-low;
  			};
  
 -			phy24_led1: led1@1 {
@@ -43,10 +44,11 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 +			led@0 {
  				reg = <0>;
  				linux,default-trigger = "netdev";
+-				active-high;
+-				status = "okay";
 +				color = <LED_COLOR_ID_GREEN>;
 +				function = LED_FUNCTION_WAN;
- 				active-high;
--				status = "okay";
++				active-low;
  			};
  
 -			phy28_led1: led1@1 {
