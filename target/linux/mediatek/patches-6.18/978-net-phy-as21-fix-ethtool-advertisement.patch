@@ -28,7 +28,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 ---
 --- a/drivers/net/phy/as21xxx.c
 +++ b/drivers/net/phy/as21xxx.c
-@@ -772,6 +772,34 @@ static int as21xxx_read_c22_lpa(struct p
+@@ -759,6 +759,34 @@ static int as21xxx_read_c22_lpa(struct p
  	return 0;
  }
  
@@ -63,7 +63,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  static int as21xxx_read_status(struct phy_device *phydev)
  {
  	int bmcr, old_link = phydev->link;
-@@ -796,12 +824,18 @@ static int as21xxx_read_status(struct ph
+@@ -783,12 +811,18 @@ static int as21xxx_read_status(struct ph
  			mii_stat1000_mod_linkmode_lpa_t(phydev->lp_advertising,
  							0);
  			mii_lpa_mod_linkmode_lpa_t(phydev->lp_advertising, 0);
