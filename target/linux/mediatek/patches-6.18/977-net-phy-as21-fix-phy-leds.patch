@@ -20,13 +20,6 @@ that stays solid while any link is up, and a green LED that blinks on TX/RX
 activity. Userspace and the netdev trigger can still override this at any
 time through the LED class devices.
 
-The activity events gate a free running blink oscillator instead of pulsing
-per packet, and its rate lives in VEND1_LED_CONF, which the driver declares
-but never writes. Left at the post firmware-load value the activity LED only
-looks alive under sustained load, short bursts such as a ping fall between
-two oscillator edges. Program the same 3.9063 Hz the vendor driver picks as
-its default through IPC_CMD_SET_LED.
-
 While at it register config_init on the AS212xx and AS215xx entries too, so
 the default applies to every supported variant instead of only AS2101x.
 
@@ -34,15 +27,10 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 ---
 --- a/drivers/net/phy/as21xxx.c
 +++ b/drivers/net/phy/as21xxx.c
-@@ -640,8 +640,66 @@ static int as21xxx_probe(struct phy_devi
+@@ -640,8 +640,44 @@ static int as21xxx_probe(struct phy_devi
  	return 0;
  }
  
-+/* Blink oscillator rate, same encoding the vendor driver passes to
-+ * IPC_CMD_SET_LED. Anything slower makes short bursts invisible.
-+ */
-+#define AS21XXX_LED_BLINK_RATE_15_6HZ	0x1
-+
 +static int as21xxx_led_set_event(struct phy_device *phydev, u8 index,
 +				 enum as21xxx_led_event event)
 +{
@@ -65,29 +53,12 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 +{
 +	int ret;
 +
-+	ret = phy_modify_mmd(phydev, MDIO_MMD_VEND1, VEND1_LED_CONF,
-+			     VEND1_LED_CONFG_BLINK,
-+			     FIELD_PREP(VEND1_LED_CONFG_BLINK,
-+					AS21XXX_LED_BLINK_RATE_15_6HZ));
-+	if (ret)
-+		return ret;
-+
 +	ret = as21xxx_led_set_event(phydev, 0,
-+				    VEND1_LED_REG_A_EVENT_ON_LINK_BLINK_ACT);
++				    VEND1_LED_REG_A_EVENT_BLINK_ACT);
 +	if (ret)
 +		return ret;
 +
-+	ret = as21xxx_led_set_event(phydev, 1, VEND1_LED_REG_A_EVENT_ON_LINK);
-+	if (ret)
-+		return ret;
-+
-+	/* TEMPORARY: dump the undocumented per-LED bits. */
-+	phydev_info(phydev, "LED0 %#x LED1 %#x CONF %#x\n",
-+		    phy_read_mmd(phydev, MDIO_MMD_VEND1, VEND1_LED_REG(0)),
-+		    phy_read_mmd(phydev, MDIO_MMD_VEND1, VEND1_LED_REG(1)),
-+		    phy_read_mmd(phydev, MDIO_MMD_VEND1, VEND1_LED_CONF));
-+
-+	return 0;
++	return as21xxx_led_set_event(phydev, 1, VEND1_LED_REG_A_EVENT_ON_LINK);
 +}
 +
  static int as21xxx_config_init(struct phy_device *phydev)
@@ -101,7 +72,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  	if (phydev->interface == PHY_INTERFACE_MODE_USXGMII)
  		return aeon_dpc_ra_enable(phydev);
  
-@@ -1125,6 +1183,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1125,6 +1161,7 @@ static struct phy_driver as21xxx_drivers
  		.name		= "Aeonsemi AS21210PB1",
  		.probe		= as21xxx_probe,
  		.match_phy_device = as21xxx_match_phy_device,
@@ -109,7 +80,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
  		.led_brightness_set = as21xxx_led_brightness_set,
-@@ -1139,6 +1198,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1139,6 +1176,7 @@ static struct phy_driver as21xxx_drivers
  		.name		= "Aeonsemi AS21510JB1",
  		.probe		= as21xxx_probe,
  		.match_phy_device = as21xxx_match_phy_device,
@@ -117,7 +88,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
  		.led_brightness_set = as21xxx_led_brightness_set,
-@@ -1153,6 +1213,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1153,6 +1191,7 @@ static struct phy_driver as21xxx_drivers
  		.name		= "Aeonsemi AS21510PB1",
  		.probe		= as21xxx_probe,
  		.match_phy_device = as21xxx_match_phy_device,
@@ -125,7 +96,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
  		.led_brightness_set = as21xxx_led_brightness_set,
-@@ -1167,6 +1228,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1167,6 +1206,7 @@ static struct phy_driver as21xxx_drivers
  		.name		= "Aeonsemi AS21511JB1",
  		.probe		= as21xxx_probe,
  		.match_phy_device = as21xxx_match_phy_device,
@@ -133,7 +104,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
  		.led_brightness_set = as21xxx_led_brightness_set,
-@@ -1181,6 +1243,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1181,6 +1221,7 @@ static struct phy_driver as21xxx_drivers
  		.name		= "Aeonsemi AS21210JB1",
  		.probe		= as21xxx_probe,
  		.match_phy_device = as21xxx_match_phy_device,
@@ -141,7 +112,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
  		.led_brightness_set = as21xxx_led_brightness_set,
-@@ -1195,6 +1258,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1195,6 +1236,7 @@ static struct phy_driver as21xxx_drivers
  		.name		= "Aeonsemi AS21511PB1",
  		.probe		= as21xxx_probe,
  		.match_phy_device = as21xxx_match_phy_device,
