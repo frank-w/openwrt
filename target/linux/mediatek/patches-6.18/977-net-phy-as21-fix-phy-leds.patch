@@ -15,10 +15,11 @@ back to software mode with no interface bound and the initial brightness
 update writes EVENT_OFF to the PHY.
 
 Program a default from config_init(), which runs on phy_init_hw() and
-therefore after of_phy_leds(). The default board behavior is a yellow LED
-that stays solid while any link is up, and a green LED that blinks on TX/RX
-activity. Userspace and the netdev trigger can still override this at any
-time through the LED class devices.
+therefore after of_phy_leds(). Follow the split used by other multi-gigabit
+PHY drivers such as air_en8811h: the first LED shows link and blinks on
+activity, the second one stays solid to indicate a multi-gigabit link.
+Userspace and the netdev trigger can still override this at any time
+through the LED class devices.
 
 While at it register config_init on the AS212xx and AS215xx entries too, so
 the default applies to every supported variant instead of only AS2101x.
@@ -41,8 +42,8 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 +}
 +
 +/* Default LED setup:
-+ *   LED0  blink: Rx/Tx activity
-+ *   LED1  On: any link detected
++ *   LED0  On: link detected, blink: Rx/Tx activity
++ *   LED1  On: link detected at 2500, 5000 or 10000 Mbps
 + *
 + * The firmware leaves the LED event registers unconfigured and registering
 + * the DT LED class devices drives them to EVENT_OFF, so program the defaults
@@ -54,11 +55,11 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 +	int ret;
 +
 +	ret = as21xxx_led_set_event(phydev, 0,
-+				    VEND1_LED_REG_A_EVENT_BLINK_ACT);
++				    VEND1_LED_REG_A_EVENT_ON_LINK_BLINK_ACT);
 +	if (ret)
 +		return ret;
 +
-+	return as21xxx_led_set_event(phydev, 1, VEND1_LED_REG_A_EVENT_ON_LINK);
++	return as21xxx_led_set_event(phydev, 1, VEND1_LED_REG_A_EVENT_ON_NG);
 +}
 +
  static int as21xxx_config_init(struct phy_device *phydev)
