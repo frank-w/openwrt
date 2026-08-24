@@ -820,7 +820,7 @@ define Device/bananapi_bpi-r4-pro-4e
   DEVICE_BL2 := comb
   $(call Device/bananapi_bpi-r4-pro-common)
   DEVICE_PACKAGES += mt7988-2p5g-phy-firmware
-  DEVICE_DTS_OVERLAY += mt7988a-bananapi-bpi-r4-pro-4e-wan-2g5 mt7988a-bananapi-bpi-r4-pro-4e-wan-sfp
+  DEVICE_DTS_OVERLAY += mt7988a-bananapi-bpi-r4-pro-4e-wan-phy mt7988a-bananapi-bpi-r4-pro-4e-wan-sfp
 endef
 TARGET_DEVICES += bananapi_bpi-r4-pro-4e
 
