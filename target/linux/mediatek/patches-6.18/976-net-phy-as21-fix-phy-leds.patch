@@ -25,7 +25,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 ---
 --- a/drivers/net/phy/as21xxx.c
 +++ b/drivers/net/phy/as21xxx.c
-@@ -639,8 +639,53 @@ static int as21xxx_probe(struct phy_devi
+@@ -662,8 +662,53 @@ static int as21xxx_probe(struct phy_devi
  				VEND1_PTP_CLK_EN);
  }
  
@@ -79,7 +79,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  	return aeon_dpc_ra_enable(phydev);
  }
  
-@@ -794,10 +839,7 @@ static int as21xxx_led_brightness_set(st
+@@ -817,10 +862,7 @@ static int as21xxx_led_brightness_set(st
  	if (value)
  		val = VEND1_LED_REG_A_EVENT_ON;
  
@@ -91,7 +91,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  }
  
  static int as21xxx_led_hw_is_supported(struct phy_device *phydev, u8 index,
-@@ -853,10 +895,7 @@ static int as21xxx_led_hw_control_set(st
+@@ -876,10 +918,7 @@ static int as21xxx_led_hw_control_set(st
  			break;
  		}
  

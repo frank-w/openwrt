@@ -17,7 +17,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 
 --- a/drivers/net/phy/as21xxx.c
 +++ b/drivers/net/phy/as21xxx.c
-@@ -606,6 +606,7 @@ static int aeon_dpc_ra_enable(struct phy
+@@ -603,6 +603,7 @@ static int aeon_dpc_ra_enable(struct phy
  static int as21xxx_probe(struct phy_device *phydev)
  {
  	struct as21xxx_priv *priv;
@@ -25,7 +25,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  	int ret;
  
  	priv = devm_kzalloc(&phydev->mdio.dev,
-@@ -627,6 +628,28 @@ static int as21xxx_probe(struct phy_devi
+@@ -624,6 +625,28 @@ static int as21xxx_probe(struct phy_devi
  	phydev->c45_ids.devices_in_package &= ~BIT(0);
  
  	ret = aeon_ipc_sync_parity(phydev, priv);

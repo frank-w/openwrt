@@ -30,7 +30,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 ---
 --- a/drivers/net/phy/as21xxx.c
 +++ b/drivers/net/phy/as21xxx.c
-@@ -900,6 +900,37 @@ static int as21xxx_led_polarity_set(stru
+@@ -900,30 +900,107 @@ static int as21xxx_led_polarity_set(stru
  			      mask, val);
  }
  
@@ -68,7 +68,8 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  static int as21xxx_match_phy_device(struct phy_device *phydev,
  				    const struct phy_driver *phydrv)
  {
-@@ -908,22 +939,68 @@ static int as21xxx_match_phy_device(stru
+ 	struct as21xxx_priv *priv;
+ 	u16 ret_sts;
  	u32 phy_id;
 +	u32 shifted_phy_id;
  	int ret;
@@ -87,10 +88,9 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 +	}
 +
  	/* Skip PHY that are not AS21xxx */
--	if (!phy_id_compare_vendor(phydev->c45_ids.device_ids[MDIO_MMD_PCS],
+ 	if (!phy_id_compare_vendor(phydev->c45_ids.device_ids[MDIO_MMD_PCS],
 -				   PHY_VENDOR_AEONSEMI))
 -		return genphy_match_phy_device(phydev, phydrv);
-+	if (!phy_id_compare_vendor(phydev->c45_ids.device_ids[MDIO_MMD_PCS],
 +				   PHY_VENDOR_AEONSEMI)) {
 +		shifted_phy_id =
 +			phydev->c45_ids.device_ids[MDIO_MMD_PMAPMD] << 16 |
