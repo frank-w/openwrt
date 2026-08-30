@@ -105,7 +105,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  static int as21xxx_match_phy_device(struct phy_device *phydev,
  				    const struct phy_driver *phydrv)
  {
-@@ -1100,6 +1110,8 @@ static struct phy_driver as21xxx_drivers
+@@ -1105,6 +1115,8 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21011JB1),
  		.name		= "Aeonsemi AS21011JB1",
  		.probe		= as21xxx_probe,
@@ -114,7 +114,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1114,6 +1126,8 @@ static struct phy_driver as21xxx_drivers
+@@ -1119,6 +1131,8 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21011PB1),
  		.name		= "Aeonsemi AS21011PB1",
  		.probe		= as21xxx_probe,
@@ -123,7 +123,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1128,6 +1142,8 @@ static struct phy_driver as21xxx_drivers
+@@ -1133,6 +1147,8 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21010PB1),
  		.name		= "Aeonsemi AS21010PB1",
  		.probe		= as21xxx_probe,
@@ -132,7 +132,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1142,6 +1158,8 @@ static struct phy_driver as21xxx_drivers
+@@ -1147,6 +1163,8 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21010JB1),
  		.name		= "Aeonsemi AS21010JB1",
  		.probe		= as21xxx_probe,
@@ -141,7 +141,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1156,6 +1174,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1161,6 +1179,7 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21210PB1),
  		.name		= "Aeonsemi AS21210PB1",
  		.probe		= as21xxx_probe,
@@ -149,7 +149,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1170,6 +1189,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1175,6 +1194,7 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21510JB1),
  		.name		= "Aeonsemi AS21510JB1",
  		.probe		= as21xxx_probe,
@@ -157,7 +157,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1184,6 +1204,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1189,6 +1209,7 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21510PB1),
  		.name		= "Aeonsemi AS21510PB1",
  		.probe		= as21xxx_probe,
@@ -165,7 +165,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1198,6 +1219,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1203,6 +1224,7 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21511JB1),
  		.name		= "Aeonsemi AS21511JB1",
  		.probe		= as21xxx_probe,
@@ -173,7 +173,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1212,6 +1234,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1217,6 +1239,7 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21210JB1),
  		.name		= "Aeonsemi AS21210JB1",
  		.probe		= as21xxx_probe,
@@ -181,7 +181,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  		.match_phy_device = as21xxx_match_phy_device,
  		.read_status	= as21xxx_read_status,
  		.read_mmd	= as21xxx_read_mmd,
-@@ -1226,6 +1249,7 @@ static struct phy_driver as21xxx_drivers
+@@ -1231,6 +1254,7 @@ static struct phy_driver as21xxx_drivers
  		PHY_ID_MATCH_EXACT(PHY_ID_AS21511PB1),
  		.name		= "Aeonsemi AS21511PB1",
  		.probe		= as21xxx_probe,
