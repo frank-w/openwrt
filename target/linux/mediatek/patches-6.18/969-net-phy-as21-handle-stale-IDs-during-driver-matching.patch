@@ -16,21 +16,22 @@ accessors, explicitly hold the MDIO bus lock around these direct calls.
 The initial Clause 45 scan happens before phylib acquires and asserts the
 per-PHY reset GPIO. Phylib applies that reset during registration and before
 driver matching, but it does not refresh the cached IDs afterwards. The PCS
-ID can consequently be left as 0xffffffff or contain the response shifted
-from an adjacent PMA/PMD transaction.
+ID can consequently be left as 0xffffffff, contain the response shifted
+from an adjacent PMA/PMD transaction, or hold another stale value.
 
-When the cached PCS ID is invalid, refresh it in the AS21xxx matcher using
-the delayed-read workaround. Also reconstruct a potentially shifted ID from
-the adjacent cached PMA/PMD and PCS IDs. If that identifies an Aeonsemi PHY,
-refresh PCS before falling back to the generic Clause 45 driver. This keeps
-the workaround local to the affected PHY family and allows normal vendor
-and model matching after reset deassertion.
+For firmware-described PHYs whose cached PCS ID does not identify Aeonsemi,
+refresh it in the AS21xxx matcher using the delayed-read workaround. Verify
+the vendor after the refresh so unrelated PHYs are not claimed. Also
+reconstruct a potentially shifted ID from the adjacent cached PMA/PMD and
+PCS IDs before falling back to the generic Clause 45 driver. This keeps the
+workaround local to the affected PHY family and allows normal vendor and
+model matching after reset deassertion.
 
 Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 ---
 --- a/drivers/net/phy/as21xxx.c
 +++ b/drivers/net/phy/as21xxx.c
-@@ -900,30 +900,107 @@ static int as21xxx_led_polarity_set(stru
+@@ -900,30 +900,112 @@ static int as21xxx_led_polarity_set(stru
  			      mask, val);
  }
  
@@ -70,11 +71,16 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
  {
  	struct as21xxx_priv *priv;
  	u16 ret_sts;
++	const char *fw_name;
  	u32 phy_id;
 +	u32 shifted_phy_id;
  	int ret;
  
-+	if (phydev->c45_ids.device_ids[MDIO_MMD_PCS] == 0xffffffff) {
++	if (!phy_id_compare_vendor(
++			phydev->c45_ids.device_ids[MDIO_MMD_PCS],
++			PHY_VENDOR_AEONSEMI) &&
++	    !of_property_read_string(phydev->mdio.dev.of_node, "firmware-name",
++				     &fw_name)) {
 +		ret = as21xxx_match_refresh_pcs_id(phydev);
 +		if (ret < 0)
 +			return ret;
@@ -83,7 +89,7 @@ Signed-off-by: Pietro Ameruoso <p.ameruoso@live.it>
 +				phydev->c45_ids.device_ids[MDIO_MMD_PCS],
 +				PHY_VENDOR_AEONSEMI))
 +			phydev_info(phydev,
-+				    "Aeonsemi recovery: invalid cached PCS ID refreshed to %08x\n",
++				    "Aeonsemi recovery: stale cached PCS ID refreshed to %08x\n",
 +				    phydev->c45_ids.device_ids[MDIO_MMD_PCS]);
 +	}
 +
